@@ -299,7 +299,11 @@ def output_paths(task: MotionTask, output_root: Path) -> dict[str, Path]:
 
 
 def verified_artifact_state(
-    task: MotionTask, output_root: Path, target_fps: float
+    task: MotionTask,
+    output_root: Path,
+    target_fps: float,
+    expected_config_sha256: str,
+    expected_mjcf_sha256: str,
 ) -> tuple[bool, str, float | None, float | None]:
     """只把完整通过、来源一致且没有二次旋转的产物视为可续跑。"""
     paths = output_paths(task, output_root)
@@ -317,8 +321,14 @@ def verified_artifact_state(
         return False, "联合验证未通过", None, None
     if Path(str(metadata.get("source_motion", ""))).resolve() != Path(task.source_path):
         return False, "metadata 来源动作不匹配", None, None
+    if metadata.get("source_motion_sha256") != task.source_sha256:
+        return False, "metadata 来源动作 SHA256 不匹配", None, None
     if abs(float(metadata.get("fps", -1.0)) - target_fps) > 1.0e-9:
         return False, "metadata fps 不匹配", None, None
+    if metadata.get("config_sha256") != expected_config_sha256:
+        return False, "metadata 配置 SHA256 已过期", None, None
+    if metadata.get("robot_xml_sha256") != expected_mjcf_sha256:
+        return False, "metadata MJCF SHA256 已过期", None, None
     motion_check = report.get("checks", {}).get("motion", {})
     contract = motion_check.get("coordinate_contract", {})
     expected_contract = {
@@ -352,6 +362,8 @@ def verified_artifact_state(
     }
     if keypoint_contract != expected_contract:
         return False, f"keypoint 坐标链路不匹配: {keypoint_contract}", None, None
+    if keypoints.get("source_motion_sha256") != task.source_sha256:
+        return False, "keypoint 来源动作 SHA256 不匹配", None, None
     return True, "全部产物和坐标链路已通过", median, p95
 
 
@@ -363,11 +375,17 @@ def run_task(
     smpl_model_path: Path,
     target_fps: float,
     resume: bool,
+    expected_config_sha256: str,
+    expected_mjcf_sha256: str,
 ) -> TaskResult:
     paths = output_paths(task, output_root)
     if resume:
         valid, message, median, p95 = verified_artifact_state(
-            task, output_root, target_fps
+            task,
+            output_root,
+            target_fps,
+            expected_config_sha256,
+            expected_mjcf_sha256,
         )
         if valid:
             return TaskResult(
@@ -432,7 +450,11 @@ def run_task(
         )
     elapsed = time.monotonic() - started
     valid, message, median, p95 = verified_artifact_state(
-        task, output_root, target_fps
+        task,
+        output_root,
+        target_fps,
+        expected_config_sha256,
+        expected_mjcf_sha256,
     )
     status = "completed" if completed.returncode == 0 and valid else "failed"
     if completed.returncode != 0:
@@ -626,6 +648,12 @@ def main() -> int:
     started = time.monotonic()
     results: list[TaskResult] = []
     event_path = output_root / "progress.jsonl"
+    expected_config_sha256 = sha256_file(
+        repository_root / "config/robot/bumi3.yaml"
+    )
+    expected_mjcf_sha256 = sha256_file(
+        repository_root / "asset/robot/bumi3/mjcf/bumi3_retarget.xml"
+    )
     with ThreadPoolExecutor(max_workers=args.workers) as executor:
         futures = {
             executor.submit(
@@ -637,6 +665,8 @@ def main() -> int:
                 smpl_model_path,
                 args.target_fps,
                 not args.no_resume,
+                expected_config_sha256,
+                expected_mjcf_sha256,
             ): task
             for task in tasks
         }

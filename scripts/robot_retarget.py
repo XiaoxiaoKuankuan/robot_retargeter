@@ -238,10 +238,10 @@ class RobotRetarget:
         if self.max_iter < 0:
             raise ValueError(f"max_ik_iterations must be >= 0, got {self.max_iter}")
         self.initial_settle_iterations = int(initial_settle_iterations)
-        if not 0 <= self.initial_settle_iterations <= self.max_iter:
+        if self.initial_settle_iterations < 0:
             raise ValueError(
-                "initial_settle_iterations 必须位于 [0,max_ik_iterations]: "
-                f"actual={self.initial_settle_iterations}, max={self.max_iter}"
+                "initial_settle_iterations 必须非负: "
+                f"actual={self.initial_settle_iterations}"
             )
         self.ik_error_improvement_threshold = float(ik_error_improvement_threshold)
         if self.ik_error_improvement_threshold < 0.0:
@@ -2245,7 +2245,12 @@ class RobotRetarget:
                 self.configuration.integrate_inplace(vel, dt)
                 next_error = self.error(solve_tasks)
                 num_iter = 1
-                while num_iter < self.max_iter and (
+                iteration_limit = (
+                    max(self.max_iter, self.initial_settle_iterations)
+                    if frame_idx == 0
+                    else self.max_iter
+                )
+                while num_iter < iteration_limit and (
                     (
                         frame_idx == 0
                         and num_iter < self.initial_settle_iterations
@@ -2444,6 +2449,9 @@ class RobotRetarget:
             "robot": self.robot_name,
             "source_motion": self.keypoints_metadata.get(
                 "source_motion_file", str(Path(self.keypoint_path).resolve())
+            ),
+            "source_motion_sha256": self.keypoints_metadata.get(
+                "source_motion_sha256"
             ),
             "keypoints_path": str(Path(self.keypoint_path).resolve()),
             "fps": float(self.fps),

@@ -9,7 +9,7 @@ render_debug: false
 keypoints_path: output_data/keypoints/bumi3/example_keypoints.pkl
 ik_mode: single_stage
 max_ik_iterations: 50
-initial_settle_iterations: 50
+initial_settle_iterations: 100
 ik_error_improvement_threshold: 0.001
 ik_error_metric: legacy_raw
 ik_solver: daqp

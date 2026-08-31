@@ -40,6 +40,7 @@ def test_standard_fields_and_default_fps(tmp_path: Path) -> None:
     assert gender == "neutral"
     assert motion["trans"].shape == (3, 3)
     assert motion["pose_body"].shape == (3, 63)
+    assert len(motion["source_motion_sha256"]) == 64
 
 
 @pytest.mark.parametrize("translation_field", ["trans", "transl"])

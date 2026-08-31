@@ -59,7 +59,7 @@ def test_bumi3_production_config_uses_scoped_dynamic_foot_policy() -> None:
     assert config["paired_flat_orientation_cost"] == 0.0
     assert config["joint_limit_occupancy_validation"] == "warning"
     assert config["ik_error_metric"] == "legacy_raw"
-    assert config["initial_settle_iterations"] == 50
+    assert config["initial_settle_iterations"] == 100
     assert config["temporal_posture_cost"] == 0.0
     assert config["max_output_joint_velocity_rad_s"] == 0.0
     assert config["max_output_joint_acceleration_rad_s2"] == 0.0

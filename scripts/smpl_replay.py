@@ -22,6 +22,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib
 import pickle
 import sys
@@ -136,6 +137,15 @@ RETARGET_KEYPOINT_AXIS_COLORS = np.array(
 )
 ROT_X_NEG_90 = Rotation.from_euler("x", -90.0, degrees=True).as_matrix().astype(np.float32)
 ROT_Y_POS_90 = Rotation.from_euler("y", 90.0, degrees=True).as_matrix().astype(np.float32)
+
+
+def sha256_file(path: Path) -> str:
+	"""流式计算源动作哈希，供正式产物绑定不可变输入内容。"""
+	digest = hashlib.sha256()
+	with path.open("rb") as stream:
+		for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+			digest.update(chunk)
+	return digest.hexdigest()
 
 
 def iter_progress(
@@ -2155,6 +2165,7 @@ def load_motion_arrays(
 		raise ValueError(f"源 fps 必须为正有限值: path={motion_file}, field={fps_field}, actual={fps}")
 	motion["source_fps"] = float(fps)
 	motion["source_motion_file"] = str(motion_file)
+	motion["source_motion_sha256"] = sha256_file(motion_file)
 	motion["source_coordinate_system"] = coordinate_system
 	convert_y_up = up_axis == "y" or (up_axis == "auto" and _is_y_up(trans, root_orient))
 	motion["requested_up_axis"] = up_axis
@@ -2615,6 +2626,7 @@ def build_replay_buffers(
 
 	metadata = {
 		"source_motion_file": str(motion.get("source_motion_file", motion_file)),
+		"source_motion_sha256": str(motion.get("source_motion_sha256", "")),
 		"source_model_type": str(motion["surface_model_type"]),
 		"source_fps": float(motion.get("source_fps", fps)),
 		"target_fps": float(fps),
