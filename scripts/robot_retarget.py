@@ -208,6 +208,7 @@ class RobotRetarget:
         initial_root_pose: dict | None = None,
         initial_joint_positions: dict[str, float] | None = None,
         max_ik_iterations: int = 50,
+        initial_settle_iterations: int = 0,
         ik_error_improvement_threshold: float = 0.001,
         ik_error_metric: str = "legacy_raw",
         robot_name: str = "robot",
@@ -236,6 +237,12 @@ class RobotRetarget:
         self.max_iter = int(max_ik_iterations)
         if self.max_iter < 0:
             raise ValueError(f"max_ik_iterations must be >= 0, got {self.max_iter}")
+        self.initial_settle_iterations = int(initial_settle_iterations)
+        if not 0 <= self.initial_settle_iterations <= self.max_iter:
+            raise ValueError(
+                "initial_settle_iterations 必须位于 [0,max_ik_iterations]: "
+                f"actual={self.initial_settle_iterations}, max={self.max_iter}"
+            )
         self.ik_error_improvement_threshold = float(ik_error_improvement_threshold)
         if self.ik_error_improvement_threshold < 0.0:
             raise ValueError(
@@ -2238,9 +2245,13 @@ class RobotRetarget:
                 self.configuration.integrate_inplace(vel, dt)
                 next_error = self.error(solve_tasks)
                 num_iter = 1
-                while (
-                    curr_error - next_error > self.ik_error_improvement_threshold
-                    and num_iter < self.max_iter
+                while num_iter < self.max_iter and (
+                    (
+                        frame_idx == 0
+                        and num_iter < self.initial_settle_iterations
+                    )
+                    or curr_error - next_error
+                    > self.ik_error_improvement_threshold
                 ):
                     curr_error = next_error
                     dt = self.configuration.model.opt.timestep
@@ -2361,6 +2372,7 @@ class RobotRetarget:
             "solver": self.solver,
             "damping": float(self.damping),
             "max_iterations": int(self.max_iter),
+            "initial_settle_iterations": int(self.initial_settle_iterations),
             "improvement_threshold": float(self.ik_error_improvement_threshold),
             "error_metric": self.ik_error_metric,
             "final_error_per_frame": errors.tolist(),
@@ -2560,6 +2572,7 @@ if  __name__ == "__main__":
         initial_root_pose=config.get("initial_root_pose"),
         initial_joint_positions=config.get("initial_joint_positions"),
         max_ik_iterations=int(config.get("max_ik_iterations", 50)),
+        initial_settle_iterations=int(config.get("initial_settle_iterations", 0)),
         ik_error_improvement_threshold=float(
             config.get("ik_error_improvement_threshold", 0.001)
         ),
