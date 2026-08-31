@@ -208,7 +208,7 @@ class RobotRetarget:
         initial_root_pose: dict | None = None,
         initial_joint_positions: dict[str, float] | None = None,
         max_ik_iterations: int = 50,
-        initial_settle_iterations: int = 0,
+        initial_settle_passes: int = 0,
         ik_error_improvement_threshold: float = 0.001,
         ik_error_metric: str = "legacy_raw",
         robot_name: str = "robot",
@@ -237,11 +237,11 @@ class RobotRetarget:
         self.max_iter = int(max_ik_iterations)
         if self.max_iter < 0:
             raise ValueError(f"max_ik_iterations must be >= 0, got {self.max_iter}")
-        self.initial_settle_iterations = int(initial_settle_iterations)
-        if self.initial_settle_iterations < 0:
+        self.initial_settle_passes = int(initial_settle_passes)
+        if self.initial_settle_passes < 0:
             raise ValueError(
-                "initial_settle_iterations 必须非负: "
-                f"actual={self.initial_settle_iterations}"
+                "initial_settle_passes 必须非负: "
+                f"actual={self.initial_settle_passes}"
             )
         self.ik_error_improvement_threshold = float(ik_error_improvement_threshold)
         if self.ik_error_improvement_threshold < 0.0:
@@ -2219,6 +2219,40 @@ class RobotRetarget:
             ):
                 break
     
+    def _solve_frame_targets(self, frame_idx: int) -> tuple[list, float, int]:
+        """更新指定帧目标并按既有停止条件求解，返回任务、误差和迭代数。"""
+        solve_tasks = self.update_targets(frame_idx)
+        curr_error = self.error(solve_tasks)
+        dt = self.configuration.model.opt.timestep
+        vel = mink.solve_ik(
+            self.configuration,
+            solve_tasks,
+            dt,
+            self.solver,
+            self.damping,
+            limits=self.ik_limits,
+        )
+        self.configuration.integrate_inplace(vel, dt)
+        next_error = self.error(solve_tasks)
+        num_iter = 1
+        while (
+            num_iter < self.max_iter
+            and curr_error - next_error > self.ik_error_improvement_threshold
+        ):
+            curr_error = next_error
+            vel = mink.solve_ik(
+                self.configuration,
+                solve_tasks,
+                dt,
+                self.solver,
+                self.damping,
+                limits=self.ik_limits,
+            )
+            self.configuration.integrate_inplace(vel, dt)
+            next_error = self.error(solve_tasks)
+            num_iter += 1
+        return solve_tasks, float(next_error), int(num_iter)
+
     def retarget(self):
         global _PAUSED
         viewer = None
@@ -2231,41 +2265,17 @@ class RobotRetarget:
             print("Controls: Space play/pause")
 
         try:
+            # legacy_hold 会在 update_targets 时把非接触任务冻结到“本轮开始姿态”。
+            # 只增加同一轮 IK 次数无法移动该冻结目标；正式输出前重复更新第 0 帧
+            # 目标，等价于无时间推进的求解器预滚动，可避免初始姿态污染 0→1 帧。
+            for _ in range(self.initial_settle_passes):
+                self._solve_frame_targets(0)
             for frame_idx in tqdm(range(self.num_frames), desc="Retargeting", unit="frame"):
                 start_time = time.time()
                 previous_output_qpos = self.configuration.data.qpos.copy()
-                solve_tasks = self.update_targets(frame_idx)
-
-                curr_error = self.error(solve_tasks)
-                dt = self.configuration.model.opt.timestep
-
-                vel = mink.solve_ik(
-                    self.configuration, solve_tasks, dt, self.solver, self.damping, limits=self.ik_limits
+                solve_tasks, next_error, num_iter = self._solve_frame_targets(
+                    frame_idx
                 )
-                self.configuration.integrate_inplace(vel, dt)
-                next_error = self.error(solve_tasks)
-                num_iter = 1
-                iteration_limit = (
-                    max(self.max_iter, self.initial_settle_iterations)
-                    if frame_idx == 0
-                    else self.max_iter
-                )
-                while num_iter < iteration_limit and (
-                    (
-                        frame_idx == 0
-                        and num_iter < self.initial_settle_iterations
-                    )
-                    or curr_error - next_error
-                    > self.ik_error_improvement_threshold
-                ):
-                    curr_error = next_error
-                    dt = self.configuration.model.opt.timestep
-                    vel = mink.solve_ik(
-                        self.configuration, solve_tasks, dt, self.solver, self.damping, limits=self.ik_limits
-                    )
-                    self.configuration.integrate_inplace(vel, dt)
-                    next_error = self.error(solve_tasks)
-                    num_iter += 1
                 clip_count, raw_max_joint_velocity = (
                     self._apply_output_joint_velocity_limit(previous_output_qpos)
                 )
@@ -2377,7 +2387,7 @@ class RobotRetarget:
             "solver": self.solver,
             "damping": float(self.damping),
             "max_iterations": int(self.max_iter),
-            "initial_settle_iterations": int(self.initial_settle_iterations),
+            "initial_settle_passes": int(self.initial_settle_passes),
             "improvement_threshold": float(self.ik_error_improvement_threshold),
             "error_metric": self.ik_error_metric,
             "final_error_per_frame": errors.tolist(),
@@ -2580,7 +2590,7 @@ if  __name__ == "__main__":
         initial_root_pose=config.get("initial_root_pose"),
         initial_joint_positions=config.get("initial_joint_positions"),
         max_ik_iterations=int(config.get("max_ik_iterations", 50)),
-        initial_settle_iterations=int(config.get("initial_settle_iterations", 0)),
+        initial_settle_passes=int(config.get("initial_settle_passes", 0)),
         ik_error_improvement_threshold=float(
             config.get("ik_error_improvement_threshold", 0.001)
         ),
