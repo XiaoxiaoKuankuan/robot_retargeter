@@ -63,8 +63,8 @@ def test_bumi3_production_config_uses_scoped_dynamic_foot_policy() -> None:
     assert config["initial_settle_passes"] == 5
     assert config["temporal_posture_cost"] == 0.0
     assert config["max_output_joint_velocity_rad_s"] == pytest.approx(30.0)
-    assert config["max_output_joint_acceleration_rad_s2"] == 0.0
-    assert config["max_output_joint_jerk_rad_s3"] == 0.0
+    assert config["max_output_joint_acceleration_rad_s2"] == pytest.approx(600.0)
+    assert config["max_output_joint_jerk_rad_s3"] == pytest.approx(40000.0)
     assert config["output"]["target_fps"] == pytest.approx(30.0)
     for name in config["ik_match_table"]:
         assert config["ik_match_table"][name][1:] == g1_config["ik_match_table"][name][1:]
