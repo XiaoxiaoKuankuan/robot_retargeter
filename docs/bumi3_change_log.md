@@ -272,3 +272,13 @@
 - `scripts/prepare_bumi3_gmr_comparison.py` 默认输入改为 `gmr_latest_pkl/`，硬检查上述五个最新流水线开关及每条 `foot_contact_bounded_qp` 方法后，按 GMR XML `jnt_qposadr` 输出 `gmr_latest/` CSV；metadata 额外保留 acceptance、Root-Z 诊断和最终足底审计。新增 `config/robot/bumi3_gmr_latest_player.yaml`，旧 legacy 播放配置继续保留，避免破坏历史复现。
 - 最终反向回读确认：当前方法比较副本与原 CSV 逐字节相同；最新 GMR CSV 相对 PKL 的根位置、根四元数和关节最大误差分别为 `5.0e-11 m`、`6.0e-11`、`5.0e-11 rad`，仅为十位小数文本序列化误差。两套播放器 `--list-only` 均识别相同顺序的 10/10 条；`py_compile`、`git diff --check` 通过，`PYTHONPATH=scripts ... pytest -q` 为 `21 passed`。本轮未自动打开 GUI 做主观效果判断，也未执行动力学 replay 或实机测试。
 - 最新 GMR 播放命令为 `PYTHONPATH=scripts /home/weili/miniconda3/envs/robot_retargeter/bin/python scripts/play_bumi3_trajectories.py --config config/robot/bumi3_gmr_latest_player.yaml --motion-dir output_data/comparison/gmr_latest --pattern '*_bumi3.csv'`；当前方法继续使用 `config/robot/bumi3.yaml` 和 `output_data/comparison/robot_retargeter`。两个窗口按同一个数字键选择同一轨迹。
+
+## 2026-08-31：新增四库全量 Z-up 重定向、断点续跑与发布门禁
+
+- 本轮位于 `feature/bumi3`，起始 HEAD 为 `7ea44142878a2b842e357ec7c68db4ccd80ac714`；修改目标是用当前 `robot_retargeter` 替代旧 GMR，对服务器 2 的 AIOZ-GDance、AIST++、CoMPAS3D、FineDance 高质量 SMPL-X 数据做正式全量 BUMI3 重定向。没有修改 `main`，没有 reset、clean、stash 或覆盖既有输出。
+- 新增 `scripts/retarget_bumi3_full_dataset.py`。正式模式固定核对四库 `1978/963/72/149`、共 `3162` 条，逐文件要求 `root_orient/pose_body/trans/betas`、30 Hz、有限值、`right_handed_z_up_metric`，并核对历史来源为 Y-up、已执行一次 `+90° about X`。批处理按数据集隔离同名 stem，模型预检只执行一次，支持受控并发、逐条日志、进度 JSONL、来源一致的断点续跑和最终 release report。
+- 根倾角发布门禁以“每条动作根倾角中位数”的分库分布为对象：分库中位数必须 `<30°`、P95 `<45°`、动作中位数 `>=60°` 的占比必须 `<1%`。少量真实倒立/地板动作允许保留，但整库约 90° 躺倒会拒绝发布；门禁同时应用于源 SMPL-X 与输出 BUMI3。
+- `bash/retarget_smpl_to_bumi3.sh` 新增 `UP_AXIS`、`PREPARE_ASSET`、`RUN_PREFLIGHT`，全量任务显式传 `UP_AXIS=z`，并在并发前复用仓库内已提交 BUMI3 资产与统一预检，避免每条重复改写资产和共同报告。单条旧入口默认仍为 `auto/true/true`，保持原行为。
+- `scripts/smpl_replay.py` 在 keypoint 元数据中新增 `requested_up_axis`、`y_up_to_z_up_conversion_applied` 和 `output_coordinate_system`；`scripts/validate_bumi3_retarget.py` 联合验证这些字段，明确禁止已经是 Z-up 的动作再次旋转，并保存输出机器人根倾角 median/P95/max。全量续跑只有在来源、fps、四类产物、联合验证和两处坐标元数据全部一致时才会跳过。
+- 新增 `tests/test_bumi3_full_dataset.py`，覆盖正确 Z-up 合同、错误 Y-up 声明拒绝、直立/躺倒倾角和分布门禁。`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts ... pytest -q -o cache_dir=/tmp/robot_retargeter_pytest_cache_full_batch` 为 `28 passed`，修改脚本 `py_compile` 与 `git diff --check` 通过；测试缓存和本轮 pyc 已精确清理。用本地旧十条 raw `pose+transl` 运行正式输入审计得到预期拒绝，证明门禁不会把未标准化旧输入混入新发布；服务器 2 的全量标准化 Z-up 数据审计和端到端重定向结果将在任务运行后另行补记。
+- 本轮门禁只证明输入/输出坐标链路、离线 IK/FK 数值和既有联合质量阈值；不等价于 IsaacLab 动力学跟踪或实机安全验证。正式输出使用新的独立根目录，旧 GMR 和此前训练数据不会被覆盖。

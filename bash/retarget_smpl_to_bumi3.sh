@@ -19,12 +19,15 @@ SMPL_MOTION_FILE="${SMPL_MOTION_FILE:-}"
 SMPL_MODEL_PATH="${SMPL_MODEL_PATH:-../GENMO/inputs/checkpoints/body_models}"
 MODEL_TYPE="${MODEL_TYPE:-auto}"
 TARGET_FPS="${TARGET_FPS:-30}"
+UP_AXIS="${UP_AXIS:-auto}"
 OUTPUT_DIR="${OUTPUT_DIR:-output_data}"
 RENDER_DEBUG="${RENDER_DEBUG:-false}"
 VISUALIZE="${VISUALIZE:-false}"
 MAX_FRAMES="${MAX_FRAMES:-0}"
 PYTHON_BIN="${PYTHON_BIN:-python}"
 SKELETON_CONFIG="${SKELETON_CONFIG:-config/skeleton/skeleton.yaml}"
+PREPARE_ASSET="${PREPARE_ASSET:-true}"
+RUN_PREFLIGHT="${RUN_PREFLIGHT:-true}"
 
 if [[ -z "${SMPL_MOTION_FILE}" ]]; then
   echo "[失败] 必须设置 SMPL_MOTION_FILE=/path/to/motion.npz" >&2
@@ -34,7 +37,7 @@ if [[ ! -f "${SMPL_MOTION_FILE}" ]]; then
   echo "[失败] SMPL 动作不存在: ${SMPL_MOTION_FILE}" >&2
   exit 2
 fi
-if [[ ! -d "${BUMI_SOURCE_DIR}" ]]; then
+if [[ "${PREPARE_ASSET}" == "true" && ! -d "${BUMI_SOURCE_DIR}" ]]; then
   echo "[失败] BUMI3 源资产目录不存在: ${BUMI_SOURCE_DIR}" >&2
   exit 2
 fi
@@ -52,6 +55,22 @@ if [[ "${RENDER_DEBUG}" != "true" && "${RENDER_DEBUG}" != "false" ]]; then
 fi
 if [[ "${VISUALIZE}" != "true" && "${VISUALIZE}" != "false" ]]; then
   echo "[失败] VISUALIZE 只能是 true/false，实际 ${VISUALIZE}" >&2
+  exit 2
+fi
+if [[ "${PREPARE_ASSET}" != "true" && "${PREPARE_ASSET}" != "false" ]]; then
+  echo "[失败] PREPARE_ASSET 只能是 true/false，实际 ${PREPARE_ASSET}" >&2
+  exit 2
+fi
+if [[ "${RUN_PREFLIGHT}" != "true" && "${RUN_PREFLIGHT}" != "false" ]]; then
+  echo "[失败] RUN_PREFLIGHT 只能是 true/false，实际 ${RUN_PREFLIGHT}" >&2
+  exit 2
+fi
+if [[ "${UP_AXIS}" != "auto" && "${UP_AXIS}" != "y" && "${UP_AXIS}" != "z" ]]; then
+  echo "[失败] UP_AXIS 只能是 auto/y/z，实际 ${UP_AXIS}" >&2
+  exit 2
+fi
+if [[ ! -s asset/robot/bumi3/mjcf/bumi3_retarget.xml ]]; then
+  echo "[失败] BUMI3 重定向资产不存在: asset/robot/bumi3/mjcf/bumi3_retarget.xml" >&2
   exit 2
 fi
 
@@ -82,22 +101,31 @@ run_step() {
   "$@"
 }
 
-run_step "1/8 准备 BUMI3 资产" \
-  "${PYTHON_BIN}" scripts/prepare_bumi3_asset.py \
-  --source-dir "${BUMI_SOURCE_DIR}" \
-  --output-dir asset/robot/bumi3 \
-  --overrides config/robot/bumi3_marker_overrides.yaml
+if [[ "${PREPARE_ASSET}" == "true" ]]; then
+  run_step "1/8 准备 BUMI3 资产" \
+    "${PYTHON_BIN}" scripts/prepare_bumi3_asset.py \
+    --source-dir "${BUMI_SOURCE_DIR}" \
+    --output-dir asset/robot/bumi3 \
+    --overrides config/robot/bumi3_marker_overrides.yaml
+else
+  echo "[1/8 准备 BUMI3 资产] 已跳过；使用仓库内已提交资产"
+fi
 
-run_step "2/8 BUMI3 模型预检" \
-  "${PYTHON_BIN}" scripts/validate_bumi3_retarget.py \
-  --config config/robot/bumi3.yaml \
-  --report "${PREFLIGHT_REPORT}"
+if [[ "${RUN_PREFLIGHT}" == "true" ]]; then
+  run_step "2/8 BUMI3 模型预检" \
+    "${PYTHON_BIN}" scripts/validate_bumi3_retarget.py \
+    --config config/robot/bumi3.yaml \
+    --report "${PREFLIGHT_REPORT}"
+else
+  echo "[2/8 BUMI3 模型预检] 已跳过；由全量批处理在并发任务前统一执行"
+fi
 
 SMPL_ARGS=(
   --no-viewer
   --motion_file "${SMPL_MOTION_FILE}"
   --smpl-model-path "${SMPL_MODEL_PATH}"
   --model-type "${MODEL_TYPE}"
+  --up-axis "${UP_AXIS}"
   --target-fps "${TARGET_FPS}"
   --robot-config config/robot/bumi3.yaml
   --skeleton-config "${SKELETON_CONFIG}"

@@ -2157,6 +2157,9 @@ def load_motion_arrays(
 	motion["source_motion_file"] = str(motion_file)
 	motion["source_coordinate_system"] = coordinate_system
 	convert_y_up = up_axis == "y" or (up_axis == "auto" and _is_y_up(trans, root_orient))
+	motion["requested_up_axis"] = up_axis
+	motion["y_up_to_z_up_conversion_applied"] = bool(convert_y_up)
+	motion["output_coordinate_system"] = "right_handed_z_up_metric"
 	if convert_y_up:
 		motion["trans"], motion["root_orient"] = _convert_y_up_to_z_up(
 			motion["trans"], motion["root_orient"]
@@ -2616,6 +2619,13 @@ def build_replay_buffers(
 		"source_fps": float(motion.get("source_fps", fps)),
 		"target_fps": float(fps),
 		"source_coordinate_system": str(motion.get("source_coordinate_system", "")),
+		"requested_up_axis": str(motion.get("requested_up_axis", "auto")),
+		"y_up_to_z_up_conversion_applied": bool(
+			motion.get("y_up_to_z_up_conversion_applied", False)
+		),
+		"output_coordinate_system": str(
+			motion.get("output_coordinate_system", "right_handed_z_up_metric")
+		),
 	}
 	return positions, quaternions, fps, gender, metadata
 

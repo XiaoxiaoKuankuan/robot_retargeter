@@ -386,6 +386,12 @@ def validate_motion(
     actual_floor_method = keypoints.get("contact_height_floor_method")
     source_floor_fit = keypoints.get("contact_height_source_floor_fit")
     retarget_floor_fit = keypoints.get("contact_height_retarget_floor_fit")
+    source_coordinate_system = str(keypoints.get("source_coordinate_system", ""))
+    requested_up_axis = str(keypoints.get("requested_up_axis", ""))
+    coordinate_conversion_applied = keypoints.get(
+        "y_up_to_z_up_conversion_applied"
+    )
+    output_coordinate_system = str(keypoints.get("output_coordinate_system", ""))
     height_offset_min = float(keypoints.get("contact_height_offset_min", np.nan))
     height_offset_median = float(
         keypoints.get("contact_height_offset_median", np.nan)
@@ -425,6 +431,32 @@ def validate_motion(
         "keypoint 地板估计方法与配置不一致: "
         f"expected={expected_floor_method}, actual={actual_floor_method}",
     )
+    # 旧 keypoint 只保存 source_coordinate_system；仅当新版字段任一出现时启用
+    # 完整坐标链路检查，使历史产物仍可被旧兼容路径读取，而正式全量批处理会额外
+    # 要求四个字段全部精确匹配。
+    coordinate_metadata_present = bool(
+        requested_up_axis or output_coordinate_system
+    ) or coordinate_conversion_applied is not None
+    if coordinate_metadata_present:
+        report.require(
+            output_coordinate_system == "right_handed_z_up_metric",
+            "keypoint 输出坐标系必须是右手 Z-up 米制: "
+            f"actual={output_coordinate_system}",
+        )
+        report.require(
+            requested_up_axis in {"auto", "y", "z"},
+            f"keypoint requested_up_axis 非法: {requested_up_axis}",
+        )
+        report.require(
+            isinstance(coordinate_conversion_applied, (bool, np.bool_)),
+            "keypoint 坐标转换标记缺失或类型错误: "
+            f"actual={coordinate_conversion_applied}",
+        )
+        if source_coordinate_system == "right_handed_z_up_metric":
+            report.require(
+                not bool(coordinate_conversion_applied),
+                "已是 Z-up 的输入不得再次执行 Y-up 到 Z-up 旋转",
+            )
     if expected_floor_method == "stable_support_dense_median":
         minimum_floor_samples = int(config["contact_height_floor_fit_min_samples"])
         for label, floor_fit in (
@@ -482,6 +514,16 @@ def validate_motion(
         )
     finite_count = int(np.size(qpos) - np.count_nonzero(np.isfinite(qpos)))
     root_norm_error = float(np.max(np.abs(np.linalg.norm(qpos[:, 3:7], axis=1) - 1.0)))
+    normalized_root_quaternions = qpos[:, 3:7] / np.clip(
+        np.linalg.norm(qpos[:, 3:7], axis=1, keepdims=True), 1.0e-12, None
+    )
+    root_up_z = 1.0 - 2.0 * (
+        np.square(normalized_root_quaternions[:, 1])
+        + np.square(normalized_root_quaternions[:, 2])
+    )
+    root_tilt_degrees = np.rad2deg(
+        np.arccos(np.clip(root_up_z, -1.0, 1.0))
+    )
     report.require(finite_count == 0, f"CSV NaN/Inf 数量为 {finite_count}")
     report.require(root_norm_error < 1.0e-5, f"根四元数范数误差过大: {root_norm_error}")
 
@@ -953,9 +995,24 @@ def validate_motion(
         "contact_height_offset_min_m": height_offset_min,
         "contact_height_offset_median_m": height_offset_median,
         "contact_height_offset_max_m": height_offset_max,
+        "coordinate_contract": {
+            "source_coordinate_system": source_coordinate_system,
+            "requested_up_axis": requested_up_axis,
+            "y_up_to_z_up_conversion_applied": (
+                bool(coordinate_conversion_applied)
+                if isinstance(coordinate_conversion_applied, (bool, np.bool_))
+                else None
+            ),
+            "output_coordinate_system": output_coordinate_system,
+        },
         "csv_shape": list(qpos.shape),
         "nan_inf_count": finite_count,
         "root_quaternion_norm_max_error": root_norm_error,
+        "root_tilt_degrees": {
+            "median": float(np.median(root_tilt_degrees)),
+            "p95": float(np.percentile(root_tilt_degrees, 95.0)),
+            "maximum": float(np.max(root_tilt_degrees)),
+        },
         "joint_limit_violation_count": violation_count,
         "joint_limit_near_rate": joint_limit_near_rate,
         "maximum_single_joint_exact_limit_rate": maximum_exact_limit_rate,
