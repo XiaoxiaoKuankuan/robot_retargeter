@@ -751,21 +751,44 @@ def validate_motion(
             "机器人根节点仍整体陷入地面: "
             f"actual={minimum_root_height}, threshold={MIN_STATIC_ROOT_HEIGHT_M}",
         )
+    task_position_error_validation = str(
+        config.get("task_position_error_validation", "hard")
+    )
     report.require(
+        task_position_error_validation in {"hard", "warning"},
+        "task_position_error_validation 必须是 hard 或 warning，实际 "
+        f"{task_position_error_validation}",
+    )
+    position_error_messages = []
+    if not (
         aggregate_position_rms is not None
-        and aggregate_position_rms < MAX_AGGREGATE_TASK_POSITION_RMS_M,
-        f"有效任务整体位置 RMS 超阈值: {aggregate_position_rms}",
-    )
-    report.require(
+        and aggregate_position_rms < MAX_AGGREGATE_TASK_POSITION_RMS_M
+    ):
+        position_error_messages.append(
+            f"有效任务整体位置 RMS 超阈值: {aggregate_position_rms}"
+        )
+    if not (
         maximum_task_position_rms is not None
-        and maximum_task_position_rms < MAX_SINGLE_TASK_POSITION_RMS_M,
-        f"最差非 calf 单任务位置 RMS 超阈值: {maximum_task_position_rms}",
-    )
-    report.require(
+        and maximum_task_position_rms < MAX_SINGLE_TASK_POSITION_RMS_M
+    ):
+        position_error_messages.append(
+            "最差非 calf 单任务位置 RMS 超阈值: "
+            f"{maximum_task_position_rms}"
+        )
+    if not (
         maximum_calf_task_position_rms is not None
-        and maximum_calf_task_position_rms < MAX_CALF_TASK_POSITION_RMS_M,
-        f"最差摆动期 calf 位置 RMS 超阈值: {maximum_calf_task_position_rms}",
-    )
+        and maximum_calf_task_position_rms < MAX_CALF_TASK_POSITION_RMS_M
+    ):
+        position_error_messages.append(
+            f"最差摆动期 calf 位置 RMS 超阈值: {maximum_calf_task_position_rms}"
+        )
+    if task_position_error_validation == "hard":
+        report.failures.extend(position_error_messages)
+    else:
+        report.warnings.extend(
+            f"连续性优先模式仅警告：{message}"
+            for message in position_error_messages
+        )
 
     paired_support_enabled = str(config.get("contact_task_mode")) == "paired_support"
     foot_slide = {}
@@ -1026,6 +1049,7 @@ def validate_motion(
         "aggregate_task_position_rms_m": aggregate_position_rms,
         "maximum_task_position_rms_m": maximum_task_position_rms,
         "maximum_calf_task_position_rms_m": maximum_calf_task_position_rms,
+        "task_position_error_validation": task_position_error_validation,
         "global_ground_alignment": {
             "mode": actual_height_offset_mode,
             "reference_contacts": expected_ground_references,

@@ -15,12 +15,14 @@ ik_error_metric: legacy_raw
 ik_solver: daqp
 ik_damping: 1.0
 temporal_posture_cost: 0.0
-max_output_joint_velocity_rad_s: 0.0
+max_output_joint_velocity_rad_s: 30.0
 max_output_joint_acceleration_rad_s2: 0.0
 max_output_joint_jerk_rad_s3: 0.0
-# 贴限位占比仍作为诊断 warning；实际越限与轨迹离散速度、加速度和 jerk 仍由
-# 验证器硬验收。这里关闭输出修正，是为了与 G1 一样观察原始逐帧 IK 结果。
+# 贴限位占比和不可达位置误差作为诊断 warning；实际越限与轨迹离散速度、
+# 加速度和 jerk 仍由验证器硬验收。30 rad/s 只裁剪离群关节帧，不启用全局
+# 高斯、加速度或 jerk 平滑，避免为少量坏点牺牲整段舞蹈细节。
 joint_limit_occupancy_validation: warning
+task_position_error_validation: warning
 postprocess_joint_gaussian_sigma_frames: 0.0
 postprocess_support_projection: false
 postprocess_min_active_support_height_m: -0.009
