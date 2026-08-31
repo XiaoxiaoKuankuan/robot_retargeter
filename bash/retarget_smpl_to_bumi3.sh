@@ -129,7 +129,7 @@ SMPL_ARGS=(
   --target-fps "${TARGET_FPS}"
   --robot-config config/robot/bumi3.yaml
   --skeleton-config "${SKELETON_CONFIG}"
-  --keypoints-name "${KEYPOINTS_NAME}"
+  "--keypoints-name=${KEYPOINTS_NAME}"
   --output-dir "${OUTPUT_DIR}"
 )
 if [[ "${MAX_FRAMES}" != "0" ]]; then
@@ -144,7 +144,7 @@ fi
 run_step "4/8 单阶段 Mink IK" \
   "${PYTHON_BIN}" scripts/robot_retarget.py \
   --config config/robot/bumi3.yaml \
-  --keypoints-name "${KEYPOINTS_NAME}" \
+  "--keypoints-name=${KEYPOINTS_NAME}" \
   --output-dir "${OUTPUT_DIR}" \
   "${RETARGET_RENDER_ARG}"
 

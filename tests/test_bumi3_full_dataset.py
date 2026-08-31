@@ -23,6 +23,9 @@ from retarget_bumi3_full_dataset import (
 )
 
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+
+
 def write_motion(path: Path, coordinate_system: str = EXPECTED_COORDINATE_SYSTEM) -> None:
     """写入三帧直立、字段完整的标准化 SMPL-X 测试动作。"""
     np.savez(
@@ -70,3 +73,11 @@ def test_root_tilt_and_distribution_gate_detect_systematic_lie_down() -> None:
     assert lying[0] == pytest.approx(90.0, abs=1.0e-6)
     assert distribution_passes(distribution_summary([8.0] * 999 + [90.0]))
     assert not distribution_passes(distribution_summary([90.0] * 1000))
+
+
+def test_single_pipeline_preserves_stems_that_start_with_dash() -> None:
+    """AIOZ 的 ``-video_id`` stem 必须用 argparse 不歧义的等号形式传递。"""
+    script = (REPOSITORY_ROOT / "bash/retarget_smpl_to_bumi3.sh").read_text(
+        encoding="utf-8"
+    )
+    assert script.count('"--keypoints-name=${KEYPOINTS_NAME}"') == 2

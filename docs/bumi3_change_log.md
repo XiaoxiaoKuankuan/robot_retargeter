@@ -282,3 +282,4 @@
 - `scripts/smpl_replay.py` 在 keypoint 元数据中新增 `requested_up_axis`、`y_up_to_z_up_conversion_applied` 和 `output_coordinate_system`；`scripts/validate_bumi3_retarget.py` 联合验证这些字段，明确禁止已经是 Z-up 的动作再次旋转，并保存输出机器人根倾角 median/P95/max。全量续跑只有在来源、fps、四类产物、联合验证和两处坐标元数据全部一致时才会跳过。
 - 新增 `tests/test_bumi3_full_dataset.py`，覆盖正确 Z-up 合同、错误 Y-up 声明拒绝、直立/躺倒倾角和分布门禁。`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts ... pytest -q -o cache_dir=/tmp/robot_retargeter_pytest_cache_full_batch` 为 `28 passed`，修改脚本 `py_compile` 与 `git diff --check` 通过；测试缓存和本轮 pyc 已精确清理。用本地旧十条 raw `pose+transl` 运行正式输入审计得到预期拒绝，证明门禁不会把未标准化旧输入混入新发布；服务器 2 的全量标准化 Z-up 数据审计和端到端重定向结果将在任务运行后另行补记。
 - 本轮门禁只证明输入/输出坐标链路、离线 IK/FK 数值和既有联合质量阈值；不等价于 IsaacLab 动力学跟踪或实机安全验证。正式输出使用新的独立根目录，旧 GMR 和此前训练数据不会被覆盖。
+- 服务器 2 首轮四库各一条 smoke 中，AIST++、CoMPAS3D、FineDance 完整通过，AIOZ 在 SMPL-X 前向前退出；原因是其首条 stem 以 `-` 开头，argparse 把分离传入的值误认成新选项。单条 shell 的两处参数现改为 `--keypoints-name=<stem>`，并新增回归测试固定该写法；这只修复文件名传参，不改变动作、IK 或坐标。
