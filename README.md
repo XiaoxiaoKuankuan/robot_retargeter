@@ -2,6 +2,17 @@
 
 English | [中文](README_zh.md)
 
+## BUMI3 support
+
+The `feature` branch includes a complete BUMI3 path from SMPL/SMPL-X through
+configurable-rate single-stage Mink IK to MuJoCo qpos CSV/metadata and IsaacLab
+Mimic NPZ. The current production config defaults to a 30 Hz strict G1-algorithm
+baseline for kinematic comparison; resample explicitly before a 50 Hz IsaacLab or
+controller delivery. See
+[`docs/bumi3_retargeting.md`](docs/bumi3_retargeting.md) and run
+`bash/retarget_smpl_to_bumi3.sh`. Use `scripts/play_bumi3_trajectories.py` to switch
+among the generated trajectories in one MuJoCo window.
+
 A toolkit for retargeting human motion (SMPL-X) or source-robot motion to target humanoid robots, with support for side-by-side multi-robot visualization.
 
 ## Overview

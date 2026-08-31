@@ -1,0 +1,32 @@
+{
+  "downloaded_at": "2026-08-27",
+  "source_host_label": "server1",
+  "source_root": "/data0/user/liwei/datasets/music_dance_review/music_only_4set_manual_q1_human_v1/motions",
+  "selection_rule": "human_review_manifest decision=keep",
+  "local_root": "dataset/music_smpl_4set",
+  "schema": {
+    "pose": "float [T,66]",
+    "transl": "float [T,3]",
+    "betas": "float [T,10] or [10]",
+    "fps": 30.0,
+    "coordinate_system": "right_handed_y_up_metric"
+  },
+  "dataset_quotas": {
+    "aistpp": 2,
+    "aioz_gdance": 3,
+    "finedance": 3,
+    "compas3d": 2
+  },
+  "files": [
+    {"dataset": "aioz_gdance", "sample_id": "0dqp2VUTYEY_02_0_372_dancer_03", "path": "aioz_gdance/0dqp2VUTYEY_02_0_372_dancer_03.npz", "frames": 372, "duration_seconds": 12.4, "sha256": "c3ea0b4463b5def75154fa9e8d15935ecfbaeaf6cc3f2dd0dc3ae8e1d9de74d0"},
+    {"dataset": "aioz_gdance", "sample_id": "E2jueKv9p8o_01_281_649_dancer_00", "path": "aioz_gdance/E2jueKv9p8o_01_281_649_dancer_00.npz", "frames": 368, "duration_seconds": 12.266667, "sha256": "d880006635127bb9f899809e185120b85be60165102b19614bcef27a4c27111e"},
+    {"dataset": "aioz_gdance", "sample_id": "GSKxQcb1PTU_04_1222_1560_dancer_00", "path": "aioz_gdance/GSKxQcb1PTU_04_1222_1560_dancer_00.npz", "frames": 338, "duration_seconds": 11.266667, "sha256": "37a6468a884fe5dee107a713a2bd69a998c09cf51124f53bea5ac682aa1a5e21"},
+    {"dataset": "aistpp", "sample_id": "gBR_sBM_cAll_d04_mBR0_ch01", "path": "aistpp/gBR_sBM_cAll_d04_mBR0_ch01.npz", "frames": 360, "duration_seconds": 12.0, "sha256": "f34670b342f2ce0877a2a51824b3ce2a581eaf5e454744a0d2965907c26ee883"},
+    {"dataset": "aistpp", "sample_id": "gBR_sBM_cAll_d04_mBR0_ch02", "path": "aistpp/gBR_sBM_cAll_d04_mBR0_ch02.npz", "frames": 360, "duration_seconds": 12.0, "sha256": "43474b1309cacdcd5e72f417cb265e2f3f24883041e82f66dd960da358a12fac"},
+    {"dataset": "compas3d", "sample_id": "Pair4_song4_take1_follower", "path": "compas3d/Pair4_song4_take1_follower.npz", "frames": 4516, "duration_seconds": 150.533333, "sha256": "43605a39ac6b51c8fbdad8350e01a668004ecbacbb5ea08120fad7a3b1062932"},
+    {"dataset": "compas3d", "sample_id": "Pair5_song2_take1_follower", "path": "compas3d/Pair5_song2_take1_follower.npz", "frames": 4518, "duration_seconds": 150.6, "sha256": "70a6be60c6a79859b022225dce18487442918a957bf5c19367c38cfdc7bf0aa5"},
+    {"dataset": "finedance", "sample_id": "189", "path": "finedance/189.npz", "frames": 681, "duration_seconds": 22.7, "sha256": "9e5ae3ad4a14f0e3d796816d61205e63c8cc7ff0fde5bf38a295b275868c7ab6"},
+    {"dataset": "finedance", "sample_id": "190", "path": "finedance/190.npz", "frames": 661, "duration_seconds": 22.033333, "sha256": "c2bba4a1b7bcc76ce9c94225803ca15d84c54d6c8344c1c5d139b6b6bdeadfae"},
+    {"dataset": "finedance", "sample_id": "192", "path": "finedance/192.npz", "frames": 521, "duration_seconds": 17.366667, "sha256": "787085f73367353594644c05508cc32c1b089b95f78d700abe3190fd9e41da0b"}
+  ]
+}

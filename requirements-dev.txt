@@ -1,0 +1,2 @@
+# BUMI3 开发与回归测试依赖；运行时依赖仍由 requirements.txt 管理。
+pytest>=8.0

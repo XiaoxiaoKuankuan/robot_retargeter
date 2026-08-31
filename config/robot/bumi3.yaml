@@ -1,0 +1,598 @@
+robot_xml_path: asset/robot/bumi3/mjcf/bumi3_retarget.xml
+# 当前生产配置以 G1 的 30 Hz、IK 任务权重、低权重 legacy_hold、停止准则及
+# 无后处理策略为基线。BUMI3 必需的模型、坐标标定、初始姿态和真实关节限位
+# 保持独立。地板与逐帧动态高度偏移只读取四个足点，手部接触不会驱动整机 Z；
+# 初始地板由低速稳定足点的最低密集高度簇稳健拟合，不再使用整段 1% 分位。
+# 用于运动学对照；交付 IsaacLab/控制器前仍需显式重采样到其 50 Hz 更新周期。
+verbose: true
+render_debug: false
+keypoints_path: output_data/keypoints/bumi3/example_keypoints.pkl
+ik_mode: single_stage
+max_ik_iterations: 50
+ik_error_improvement_threshold: 0.001
+ik_error_metric: legacy_raw
+ik_solver: daqp
+ik_damping: 1.0
+temporal_posture_cost: 0.0
+max_output_joint_velocity_rad_s: 0.0
+max_output_joint_acceleration_rad_s2: 0.0
+max_output_joint_jerk_rad_s3: 0.0
+# 贴限位占比仍作为诊断 warning；实际越限与轨迹离散速度、加速度和 jerk 仍由
+# 验证器硬验收。这里关闭输出修正，是为了与 G1 一样观察原始逐帧 IK 结果。
+joint_limit_occupancy_validation: warning
+postprocess_joint_gaussian_sigma_frames: 0.0
+postprocess_support_projection: false
+postprocess_min_active_support_height_m: -0.009
+postprocess_max_stable_support_height_above_clearance_m: 0.018
+knee_angle_offset_degrees: 15.0
+joints_limit_offset_degrees:
+  knee_pitch_joint:
+  - 10.0
+  - 0.0
+  elbow_pitch_joint:
+  - 0.0
+  - -5.0
+initial_root_pose:
+  position:
+  - 0.0
+  - 0.0
+  - 0.65
+  quaternion_wxyz:
+  - 0.7071067811865476
+  - 0.0
+  - 0.0
+  - -0.7071067811865475
+reference_pose:
+  root_yaw_degrees: -90.0
+  regularization_weight: 0.1
+  flat_foot_orientation_weight: 1000000.0
+  fixed_parameters:
+    ankle_pitch: 0.0
+    ankle_roll: 0.0
+    leg_roll: 0.0
+    leg_yaw: 0.0
+  joint_seeds:
+    waist_yaw_joint: 2.8325886546842913e-05
+    l_arm_pitch_joint: 0.4608662231760656
+    r_arm_pitch_joint: 0.4608662231760656
+    l_arm_roll_joint: 1.4
+    r_arm_roll_joint: -1.4
+    l_arm_yaw_joint: -0.01379262575414033
+    r_arm_yaw_joint: 0.01379262575414033
+    l_elbow_pitch_joint: -0.08726646259971647
+    r_elbow_pitch_joint: -0.08726646259971647
+    l_leg_pitch_joint: -0.15506015924803737
+    r_leg_pitch_joint: -0.15506015924803737
+    l_leg_roll_joint: 0.05121291105661445
+    r_leg_roll_joint: -0.05121291105661445
+    l_leg_yaw_joint: -0.012092723213514902
+    r_leg_yaw_joint: 0.012092723213514902
+    l_knee_pitch_joint: 0.47309298668216987
+    r_knee_pitch_joint: 0.47309298668216987
+    l_ankle_pitch_joint: 0.0
+    r_ankle_pitch_joint: 0.0
+    l_ankle_roll_joint: 0.0
+    r_ankle_roll_joint: 0.0
+  solved_joint_positions:
+    waist_yaw_joint: 2.899564283686375e-05
+    l_arm_pitch_joint: 0.46128587893954603
+    r_arm_pitch_joint: 0.46128587893954603
+    l_arm_roll_joint: 1.256621393543201
+    r_arm_roll_joint: -1.256621393543201
+    l_arm_yaw_joint: -0.024068255425964344
+    r_arm_yaw_joint: 0.024068255425964344
+    l_elbow_pitch_joint: -0.08726646259971649
+    r_elbow_pitch_joint: -0.08726646259971649
+    l_leg_pitch_joint: -0.17453198555935315
+    r_leg_pitch_joint: -0.17453198555935315
+    l_leg_roll_joint: 0.0
+    r_leg_roll_joint: -0.0
+    l_leg_yaw_joint: 0.0
+    r_leg_yaw_joint: -0.0
+    l_knee_pitch_joint: 0.17453292519943298
+    r_knee_pitch_joint: 0.17453292519943298
+    l_ankle_pitch_joint: 0.0
+    r_ankle_pitch_joint: 0.0
+    l_ankle_roll_joint: 0.0
+    r_ankle_roll_joint: -0.0
+initial_joint_positions:
+  l_leg_pitch_joint: -0.15528691429534264
+  r_leg_pitch_joint: -0.15528691429534264
+  waist_yaw_joint: 2.9000211289120382e-05
+  l_leg_roll_joint: 0.05121265591095283
+  r_leg_roll_joint: -0.05121265591095283
+  l_arm_pitch_joint: 0.4612859068688878
+  r_arm_pitch_joint: 0.4612859068688878
+  l_leg_yaw_joint: -0.012092724425101026
+  r_leg_yaw_joint: 0.012092724425101026
+  l_arm_roll_joint: 1.2566213701092614
+  r_arm_roll_joint: -1.2566213701092614
+  l_knee_pitch_joint: 0.4736151929188595
+  r_knee_pitch_joint: 0.4736151929188595
+  l_arm_yaw_joint: -0.024067866857665488
+  r_arm_yaw_joint: 0.024067866857665488
+  l_ankle_pitch_joint: -0.172
+  r_ankle_pitch_joint: -0.172
+  l_elbow_pitch_joint: -0.08726646259971649
+  r_elbow_pitch_joint: -0.08726646259971649
+  l_ankle_roll_joint: 0.0
+  r_ankle_roll_joint: -0.0
+robot_links:
+  left_hip:
+  - hips_sphere
+  - l_leg_pitch_link
+  left_thigh:
+  - l_leg_pitch_link
+  - l_knee_pitch_link
+  left_calf:
+  - l_knee_pitch_link
+  - l_ankle_roll_link
+  right_hip:
+  - hips_sphere
+  - r_leg_pitch_link
+  right_thigh:
+  - r_leg_pitch_link
+  - r_knee_pitch_link
+  right_calf:
+  - r_knee_pitch_link
+  - r_ankle_roll_link
+  neck:
+  - hips_sphere
+  - neck_sphere
+  head:
+  - neck_sphere
+  - head_sphere
+  left_shoulder:
+  - neck_sphere
+  - l_arm_pitch_link
+  left_arm:
+  - l_arm_pitch_link
+  - l_elbow_pitch_link
+  left_fore_arm:
+  - l_elbow_pitch_link
+  - left_hand
+  right_shoulder:
+  - neck_sphere
+  - r_arm_pitch_link
+  right_arm:
+  - r_arm_pitch_link
+  - r_elbow_pitch_link
+  right_fore_arm:
+  - r_elbow_pitch_link
+  - right_hand
+contact_links:
+- left_foot_end_link
+- left_toe_link
+- right_foot_end_link
+- right_toe_link
+- left_hand
+- right_hand
+# 手部仍保留为 G1 式低权重接触任务，但绝不能参与地板高度估计。这里使用源
+# skeleton 的 canonical contact 名称，而不是 BUMI3 MJCF body 名称。
+ground_reference_contacts:
+- left_foot_end
+- left_toe
+- right_foot_end
+- right_toe
+# 与 G1 一致，不使用显式 contact_map：按 contact_links/contact_names 的固定顺序
+# 建立四个足点和两个手点的传统低权重接触任务。接触区间 mean 锁点和摆动期
+# 零残差保持沿用 G1 语义；高度检测与动态偏移只读取四足点。
+contact_pos_fixed_factor: 15.0
+contact_task_mode: legacy_hold
+contact_position_aggregation: mean
+contact_transition_window_seconds: 0.0
+contact_weight_ramp_seconds: 0.0
+paired_flat_orientation_cost: 0.0
+# 平足接触期仅软约束同一只脚 heel_z-toe_z=0。它不锁足点 XY、不指定绝对 z，
+# 且 Root-Z 在相对高度雅可比中相消；cost 15 仍低于腿部位置任务 30，0.10 秒
+# smootherstep 避免目标代价硬开关。
+heel_toe_height_difference_cost: 15.0
+heel_toe_height_difference_ramp_seconds: 0.10
+# 保持仓库/G1 默认的逐帧接触高度偏移，但输入严格裁剪为上面的四个足点，手部
+# 即使被检测为接触也不会参与整机 Z。初始值不再取全序列 1% 最低高度，而是先
+# 按速度筛稳定足点，再选最低的最大密集高度簇并以中位数拟合水平 z 地板。
+contact_height_dynamic_offset_enabled: true
+contact_height_prevent_penetration: false
+contact_height_relative_to_sequence_floor: true
+contact_height_floor_method: stable_support_dense_median
+contact_height_floor_fit_speed_threshold_mps: 0.2
+contact_height_floor_fit_inlier_tolerance_m: 0.04
+contact_height_floor_fit_min_samples: 8
+contact_hysteresis:
+  enabled: false
+  enter_speed_mps: 0.2
+  exit_speed_mps: 0.35
+  enter_relative_height_m: 0.075
+  exit_relative_height_m: 0.1
+  enter_confirmation_seconds: 0.06
+  exit_confirmation_seconds: 0.08
+  minimum_contact_seconds: 0.2
+  minimum_swing_seconds: 0.2
+require_ground_contact_detection: false
+post_ik_ground_bodies: []
+post_ik_ground_clearance: 0.003
+post_ik_ground_mode: lift_only
+post_ik_foot_floor_barrier:
+  # G1 式连续性优先模式不做接触前竖直预约束或事后单踝修正；后者会改变足点
+  # 圆弧方向并制造新的 jerk。脚滑、悬空和穿地仍由报告与 warning 如实记录，
+  # 但不再把它们误表述为 legacy_hold 能够保证的硬合同。
+  enabled: false
+ik_match_table:
+  hips_mean:
+  - hips_sphere
+  - 100.0
+  - 0.0
+  head:
+  - head_sphere
+  - 0.0
+  - 3.0
+  left_hip:
+  - l_leg_pitch_link
+  - 30.0
+  - 3.0
+  left_thigh:
+  - l_knee_pitch_link
+  - 0.0
+  - 3.0
+  left_calf:
+  - l_ankle_roll_link
+  - 30.0
+  - 3.0
+  right_hip:
+  - r_leg_pitch_link
+  - 30.0
+  - 3.0
+  right_thigh:
+  - r_knee_pitch_link
+  - 0.0
+  - 3.0
+  right_calf:
+  - r_ankle_roll_link
+  - 30.0
+  - 3.0
+  left_shoulder:
+  - l_arm_pitch_link
+  - 30.0
+  - 3.0
+  left_arm:
+  - l_elbow_pitch_link
+  - 10.0
+  - 1.0
+  left_fore_arm:
+  - left_hand
+  - 10.0
+  - 1.0
+  right_shoulder:
+  - r_arm_pitch_link
+  - 30.0
+  - 3.0
+  right_arm:
+  - r_elbow_pitch_link
+  - 10.0
+  - 1.0
+  right_fore_arm:
+  - right_hand
+  - 10.0
+  - 1.0
+key_frame_config:
+  hips_mean:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 2.2204460492503126e-16
+      - 0.0
+      - 0.9999999999999998
+      y:
+      - 0.9999999999999998
+      - 0.0
+      - -2.2204460492503126e-16
+      z:
+      - 0.0
+      - 0.9999999999999998
+      - 0.0
+  left_up_leg:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.027408205749449525
+      - 0.2024491501178331
+      - 0.9789091540455446
+      y:
+      - 0.9894370255513918
+      - -0.14494552198311422
+      - 0.0022733510635121468
+      z:
+      - 0.14234873629790767
+      - 0.9685066531901629
+      - -0.20428338160697043
+  left_leg:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.004206619349809577
+      - 0.07838652423175195
+      - 0.9969141674048525
+      y:
+      - 0.9942653827808358
+      - 0.10685809334138346
+      - -0.0042067197579591774
+      z:
+      - -0.10685809729413881
+      - 0.9911795501856911
+      - -0.07838651884327576
+  left_foot:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.3069560549940901
+      - 0.0668692478133718
+      - 0.9493716258659403
+      y:
+      - 0.9411870507770363
+      - -0.1266951450453289
+      - 0.31323358005100177
+      z:
+      - 0.14122646972890512
+      - 0.9896852246642955
+      - -0.024046628227128074
+  right_up_leg:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.02299492733333244
+      - 0.2106417974223315
+      - 0.9772928253576939
+      y:
+      - 0.9928671947488472
+      - 0.11920276642322794
+      - -0.002331108878620834
+      z:
+      - -0.11698703735238954
+      - 0.9702683822817987
+      - -0.21188038945539955
+  right_leg:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.0009199844302607542
+      - 0.0490674517892902
+      - 0.9987950434416233
+      y:
+      - 0.9992975649354169
+      - -0.03746371948995654
+      - 0.0009200196326731442
+      z:
+      - 0.03746372035442733
+      - 0.9980926083770405
+      - -0.04906745112925408
+  right_foot:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.2553266168654233
+      - 0.060523305216861736
+      - 0.9649586769627413
+      y:
+      - 0.9596927180597551
+      - 0.10538981312006421
+      - -0.26054342093708216
+      z:
+      - -0.11746576362130799
+      - 0.9925874857241275
+      - -0.031174950853504996
+  shoulder_mean:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 2.8995642833040673e-05
+      - 0.0
+      - 0.9999999995796263
+      y:
+      - 0.9999999995796263
+      - 0.0
+      - -2.8995642833040673e-05
+      z:
+      - 0.0
+      - 1.0
+      - 0.0
+  left_arm:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.08327437886190212
+      - -0.4024799780049501
+      - 0.9116332843475491
+      y:
+      - 0.8476355203213437
+      - 0.5096425604735356
+      - 0.1475753544584714
+      z:
+      - -0.5240032466643019
+      - 0.7604435073423361
+      - 0.38359649324017203
+  left_fore_arm:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.02374599806070416
+      - -0.43397650049191566
+      - 0.9006111950208548
+      y:
+      - 0.32669733052399447
+      - 0.8480365739542445
+      - 0.41725630428364247
+      z:
+      - -0.9448306630315283
+      - 0.3041354406456736
+      - 0.1216414893803301
+  left_hand:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.024974330582615605
+      - -0.4339200244921049
+      - 0.9006051827281039
+      y:
+      - 0.25156405395141984
+      - 0.8746237474252128
+      - 0.4144259007342622
+      z:
+      - -0.9675183768649964
+      - 0.21620988132980523
+      - 0.13100182305553668
+  right_arm:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.08446869340531077
+      - -0.4165906152993548
+      - 0.9051614767978721
+      y:
+      - 0.918482614705111
+      - -0.384761168526816
+      - -0.09137028881612394
+      z:
+      - 0.38633499235619656
+      - 0.8236571510272852
+      - 0.41513151078032323
+  right_fore_arm:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 0.02251161641454691
+      - -0.43389813146781575
+      - 0.900680652970376
+      y:
+      - 0.20972555620487468
+      - -0.8788131494019215
+      - -0.4286054590329351
+      z:
+      - 0.9775011090535709
+      - 0.19854435259411207
+      - 0.07121602243894755
+  right_hand:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - -0.024922103288219304
+      - -0.4339200244921052
+      - 0.9006066295072794
+      y:
+      - 0.25154002043762935
+      - -0.8746237474252128
+      - -0.4144404885603175
+      z:
+      - 0.96752597220226
+      - 0.2162098813298053
+      - 0.1309457152007014
+  head:
+    offset_deg_xyz:
+    - 0.0
+    - 0.0
+    - 0.0
+    axis_map_cols:
+      x:
+      - 2.8995642833040673e-05
+      - 0.0
+      - 0.9999999995796263
+      y:
+      - 0.9999999995796263
+      - 0.0
+      - -2.8995642833040673e-05
+      z:
+      - 0.0
+      - 1.0
+      - 0.0
+output:
+  target_fps: 30.0
+  root_quaternion_csv_order: xyzw
+  mimic_quaternion_order: wxyz
+  anchor_body_name: waist_yaw_link
+isaac_joint_names:
+- l_leg_pitch_joint
+- r_leg_pitch_joint
+- waist_yaw_joint
+- l_leg_roll_joint
+- r_leg_roll_joint
+- l_arm_pitch_joint
+- r_arm_pitch_joint
+- l_leg_yaw_joint
+- r_leg_yaw_joint
+- l_arm_roll_joint
+- r_arm_roll_joint
+- l_knee_pitch_joint
+- r_knee_pitch_joint
+- l_arm_yaw_joint
+- r_arm_yaw_joint
+- l_ankle_pitch_joint
+- r_ankle_pitch_joint
+- l_elbow_pitch_joint
+- r_elbow_pitch_joint
+- l_ankle_roll_joint
+- r_ankle_roll_joint
+isaac_body_names:
+- base_link
+- waist_yaw_link
+- l_arm_pitch_link
+- l_arm_roll_link
+- l_arm_yaw_link
+- l_elbow_pitch_link
+- r_arm_pitch_link
+- r_arm_roll_link
+- r_arm_yaw_link
+- r_elbow_pitch_link
+- l_leg_pitch_link
+- l_leg_roll_link
+- l_leg_yaw_link
+- l_knee_pitch_link
+- l_ankle_pitch_link
+- l_ankle_roll_link
+- r_leg_pitch_link
+- r_leg_roll_link
+- r_leg_yaw_link
+- r_knee_pitch_link
+- r_ankle_pitch_link
+- r_ankle_roll_link
+mjcf_to_isaac_body_name: {}

@@ -1,0 +1,9 @@
+# 本配置只用于播放 GMR 最新 temporal IK + 轨迹 QP + 足底 Root-Z QP 流水线
+# 生成的 BUMI3 轨迹。最新和 legacy GMR 共用同一套目标 XML，但它与当前
+# robot_retargeter 的 BUMI3 XML 存在不同的 qpos 排列，因此必须使用 GMR 自己
+# 的模型加载由 prepare_bumi3_gmr_comparison.py 按关节名封装的 CSV。
+#
+# 这里不重复定义 IK 权重：正式映射仍来自用户指定的 smplx_to_bumi3_auto.json；
+# temporal IK、轨迹 QP 和只使用左右足底 mesh 的 Root-Z QP 开关记录在每条 PKL
+# 和 comparison_manifest.json 的 pipeline_config 中。本文件只绑定 MuJoCo 播放资产。
+robot_xml_path: /home/weili/GMR_minimal_robots_smplx.tar.gz/GMR-master/assets/bumi3/bumi3.xml

@@ -2,6 +2,26 @@
 
 中文 | [English](README.md)
 
+## BUMI3 快速入口
+
+本分支新增 BUMI3 的 SMPL/SMPL-X → 可配置帧率关键点 → 单阶段 Mink IK → `[T,28]`
+MuJoCo CSV/JSON → IsaacLab Mimic NPZ 完整链路。当前生产配置默认使用 30 Hz 的严格
+G1 算法基线做运动学对照；交付 50 Hz IsaacLab/控制器前应显式重采样。激活
+`robot_retargeter` 环境后可运行：
+
+```bash
+BUMI_SOURCE_DIR=../legged_lab/source/NoetixRobot/NoetixRobot/assets/robots/bumi3 \
+SMPL_MOTION_FILE=dataset/music_smpl_4set/aistpp/gBR_sBM_cAll_d04_mBR0_ch01.npz \
+SMPL_MODEL_PATH=../GENMO/inputs/checkpoints/body_models \
+MODEL_TYPE=smplx \
+PYTHON_BIN="$CONDA_PREFIX/bin/python" \
+./bash/retarget_smpl_to_bumi3.sh
+```
+
+多轨迹播放使用 `python scripts/play_bumi3_trajectories.py`，方向键/P/N 与数字键可直接
+切换。资产来源、关节/body 顺序、四元数和验证细节见
+[`docs/bumi3_retargeting.md`](docs/bumi3_retargeting.md)。
+
 将人体动作（SMPL-X）或源机器人动作重定向到目标人形机器人，并支持多机器人并排可视化的工具集。
 
 ## 简介
@@ -337,4 +357,3 @@ $$
 3. 该约束以额外 `FrameTask` 形式加入优化，权重由 `contact_pos_fixed_factor` 控制。
 
 这样可以显著减小支撑相内的足端漂移（foot sliding），同时在摆动相保持动作自由度。
-

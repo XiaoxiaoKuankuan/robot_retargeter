@@ -1,0 +1,7 @@
+# 本配置只用于播放“原始 GMR legacy 流程”生成的 BUMI3 轨迹。GMR 资产与当前
+# robot_retargeter 的 BUMI3 资产虽然关节名称相同，但 qpos 排列和 XML SHA256
+# 不同，因此必须让播放器加载 GMR 自己的 XML，不能把 GMR CSV 交给 bumi3.yaml。
+# 此文件不参与 IK、不修改轨迹，也不覆盖 GMR 的 smplx_to_bumi3_auto.json；它
+# 只是把播放器绑定到用户指定 GMR 仓库中的目标模型。若 GMR 仓库移动位置，需
+# 同步更新此绝对路径，并重新运行对比整理脚本验证模型哈希和 qpos 合同。
+robot_xml_path: /home/weili/GMR_minimal_robots_smplx.tar.gz/GMR-master/assets/bumi3/bumi3.xml

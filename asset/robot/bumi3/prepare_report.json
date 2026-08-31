@@ -1,0 +1,287 @@
+{
+  "source_dir": "/home/weili/legged_lab/source/NoetixRobot/NoetixRobot/assets/robots/bumi3",
+  "source_mjcf": "/home/weili/legged_lab/source/NoetixRobot/NoetixRobot/assets/robots/bumi3/mjcf/bumi3.xml",
+  "source_mjcf_sha256": "041c81e8176c7f375302796deca28b141891a3c097d8e341e8d967b735466edf",
+  "source_urdf": "/home/weili/legged_lab/source/NoetixRobot/NoetixRobot/assets/robots/bumi3/urdf/bumi.urdf",
+  "source_urdf_sha256": "174c1747019ced64267e74244bf89f3746856c90c30f88e4f162582ebc486476",
+  "output_mjcf": "/home/weili/robot_retargeter/asset/robot/bumi3/mjcf/bumi3_retarget.xml",
+  "output_mjcf_sha256": "fe93472dd764704fe8389b0f82052ae84ed8bc90f6d71b1467872f86e08a9ad3",
+  "output_status": "unchanged",
+  "joint_count": 21,
+  "joint_limit_changes": [],
+  "mesh_files": [
+    {
+      "name": "base_link.STL",
+      "status": "unchanged",
+      "sha256": "c288fe9d425ffdaf9c9cb034a021ef2e92b9adbe312804bdc8c1e84fe37613a4"
+    },
+    {
+      "name": "l_ankle_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "56d74b8d794e0eec37bb9411fc9d90cc0a9d906ae0aeade9e0de4b50cea656c0"
+    },
+    {
+      "name": "l_ankle_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "02ffd67b382031735f1749d89f1b573f1cff1d198b7dd3036da410ebda4f83dd"
+    },
+    {
+      "name": "l_arm_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "d2b4e486bd02aaf2d919b739d4422658e3aa8bc04252b5fa07f5ef4d3781a572"
+    },
+    {
+      "name": "l_arm_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "24a4e62aa69db8e790cece4d42dd50266df6f69726fbf006479ab9586a274080"
+    },
+    {
+      "name": "l_arm_yaw_link.STL",
+      "status": "unchanged",
+      "sha256": "a2c1bdbe4ab7a4a026fc974cd0c3bb6593a8b521f6867e04a864f4b03a8fa227"
+    },
+    {
+      "name": "l_elbow_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "b4ba8b3429984445ca07c19e0781f0518fd6807cf14c82d2116669d9b6cc94fe"
+    },
+    {
+      "name": "l_knee_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "a97c8fd46eab59d3db482f7024d1c1f058b3444073d7aea62e354862ccb0322b"
+    },
+    {
+      "name": "l_leg_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "4e304c7adc845feffbb7b50241b2bed6a92ecec6d3d8f47e167a39a43fc95ad9"
+    },
+    {
+      "name": "l_leg_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "7308669dbc4df6c39c1e484b5c459cc3568083b66517a334e523d268a68e64ab"
+    },
+    {
+      "name": "l_leg_yaw_link.STL",
+      "status": "unchanged",
+      "sha256": "54e1d8b923ea94ed5594cf6b0e38bc072fc893794f9212763af632f546c99d55"
+    },
+    {
+      "name": "r_ankle_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "3f60b7b8286b1d6bc36a6f836d591e066b7ac1b480eaa146e64cef5a91617065"
+    },
+    {
+      "name": "r_ankle_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "931cfc248e090d6aeddbc4ca35a2f1523aac8fa4f58a7d7db257bf48eff7c70e"
+    },
+    {
+      "name": "r_arm_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "2599dafb92e92a2d760f1c41595d05ca67b99ab4571a5d06fec10f51961a82b2"
+    },
+    {
+      "name": "r_arm_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "65cd6ecf48c88ff1bd5398e59c2be1c45da29f3bb8aa20e9d67ffb46dcb44f72"
+    },
+    {
+      "name": "r_arm_yaw_link.STL",
+      "status": "unchanged",
+      "sha256": "63f0d50359ecd1f58ad5889b3b4ab10058171730ffe84a2138888fa2a077870b"
+    },
+    {
+      "name": "r_elbow_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "4a4a40c67b81cf5a954b7297b069a251574b1d7e4190575b0b21721440d16977"
+    },
+    {
+      "name": "r_knee_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "a2d4dfd441e49aafbb1339d923121f7ca3591c180ff831d7b6c57b367203760b"
+    },
+    {
+      "name": "r_leg_pitch_link.STL",
+      "status": "unchanged",
+      "sha256": "a03b9cee58f5639478a8cf51d784cc54a736e65a5d4cb8c7c796ad62f902c739"
+    },
+    {
+      "name": "r_leg_roll_link.STL",
+      "status": "unchanged",
+      "sha256": "de9ca72b00630c40f364005ca856c16ceb4cbc10842e2e2fa5966241341b6939"
+    },
+    {
+      "name": "r_leg_yaw_link.STL",
+      "status": "unchanged",
+      "sha256": "abe65bfcd1aa74d39cfa68d626733011cc7a37859dcafcd3ef9579609a569ceb"
+    },
+    {
+      "name": "waist_yaw_link.STL",
+      "status": "unchanged",
+      "sha256": "4700f2d11d8790a02af1e8aa45421d8ba9982ff730eea95430c6533aa937c894"
+    }
+  ],
+  "markers": {
+    "hips_sphere": {
+      "parent": "base_link",
+      "position_local": [
+        0.0010184,
+        0.0,
+        0.03874999999999995
+      ],
+      "overridden": false,
+      "visible": false
+    },
+    "neck_sphere": {
+      "parent": "waist_yaw_link",
+      "position_local": [
+        0.0010007,
+        0.0,
+        0.17203999999999997
+      ],
+      "overridden": false,
+      "visible": false
+    },
+    "head_sphere": {
+      "parent": "waist_yaw_link",
+      "position_local": [
+        0.0010007,
+        0.0,
+        0.39272837281227113
+      ],
+      "overridden": false,
+      "visible": false
+    },
+    "left_foot_end_link": {
+      "parent": "l_ankle_roll_link",
+      "position_local": [
+        -0.056576418250799176,
+        -0.004164664540439844,
+        -0.050089079678058625
+      ],
+      "overridden": false,
+      "visible": true
+    },
+    "left_toe_link": {
+      "parent": "l_ankle_roll_link",
+      "position_local": [
+        0.10030518126487732,
+        -0.004164664540439844,
+        -0.050089079678058625
+      ],
+      "overridden": false,
+      "visible": true
+    },
+    "right_foot_end_link": {
+      "parent": "r_ankle_roll_link",
+      "position_local": [
+        -0.05640291285514831,
+        6.015891340638291e-09,
+        -0.05005926841497421
+      ],
+      "overridden": false,
+      "visible": true
+    },
+    "right_toe_link": {
+      "parent": "r_ankle_roll_link",
+      "position_local": [
+        0.0997994379401207,
+        6.015891340638291e-09,
+        -0.05005926841497421
+      ],
+      "overridden": false,
+      "visible": true
+    },
+    "left_hand": {
+      "parent": "l_elbow_pitch_link",
+      "position_local": [
+        0.0018758440855890512,
+        0.0036406926810741425,
+        -0.18561671674251556
+      ],
+      "overridden": false,
+      "visible": false
+    },
+    "right_hand": {
+      "parent": "r_elbow_pitch_link",
+      "position_local": [
+        0.0018768024165183306,
+        -0.003548096865415573,
+        -0.18561458587646484
+      ],
+      "overridden": false,
+      "visible": false
+    }
+  },
+  "geometry_evidence": {
+    "left_foot": {
+      "bounds_min": [
+        -0.06885001063346863,
+        -0.041276201605796814,
+        -0.05111297219991684
+      ],
+      "bounds_max": [
+        0.12578679621219635,
+        0.04128890484571457,
+        0.012904919683933258
+      ],
+      "sole_vertices": 18879,
+      "sole_band_height": 0.004,
+      "x_span": 0.1711200214922428,
+      "y_span": 0.07424210757017136
+    },
+    "right_foot": {
+      "bounds_min": [
+        -0.06885001063346863,
+        -0.04128890484571457,
+        -0.05111297219991684
+      ],
+      "bounds_max": [
+        0.12578679621219635,
+        0.041276201605796814,
+        0.012904919683933258
+      ],
+      "sole_vertices": 23533,
+      "sole_band_height": 0.004,
+      "x_span": 0.1711200214922428,
+      "y_span": 0.07424210757017136
+    },
+    "left_hand": {
+      "principal_axis": [
+        0.02125128164403249,
+        0.03480138593993276,
+        -0.9991682774013324
+      ],
+      "low_center": [
+        2.830054524061154e-10,
+        -0.028499994426965714,
+        0.0226037185639143
+      ],
+      "high_center": [
+        0.0018758440855890512,
+        0.0036406926810741425,
+        -0.18561671674251556
+      ],
+      "distance_from_joint": 0.18566189422846768
+    },
+    "right_hand": {
+      "principal_axis": [
+        -0.021307654460374106,
+        0.03530741319813757,
+        0.999149323391981
+      ],
+      "low_center": [
+        0.0018768024165183306,
+        -0.003548096865415573,
+        -0.18561458587646484
+      ],
+      "high_center": [
+        2.830248257978951e-10,
+        0.028499994426965714,
+        0.02251402847468853
+      ],
+      "distance_from_joint": 0.18565798089166155
+    },
+    "waist_mesh_z_max": 0.3777283728122711
+  }
+}
