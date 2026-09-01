@@ -45,7 +45,7 @@ if [[ ! -e "${SMPL_MODEL_PATH}" ]]; then
   echo "[失败] SMPL 模型路径不存在: ${SMPL_MODEL_PATH}" >&2
   exit 2
 fi
-if ! "${PYTHON_BIN}" -c "import mujoco, mink, smplx, torch, yaml, scipy, trimesh"; then
+if ! "${PYTHON_BIN}" -c "import mujoco, mink, osqp, smplx, torch, yaml, scipy, trimesh"; then
   echo "[失败] PYTHON_BIN 缺少运行依赖；请激活 robot_retargeter 环境或设置正确解释器" >&2
   exit 2
 fi

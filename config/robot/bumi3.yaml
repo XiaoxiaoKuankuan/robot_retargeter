@@ -1,8 +1,10 @@
 robot_xml_path: asset/robot/bumi3/mjcf/bumi3_retarget.xml
-# 当前生产配置以 G1 的 30 Hz、IK 任务权重、低权重 legacy_hold、停止准则及
-# 无后处理策略为基线。BUMI3 必需的模型、坐标标定、初始姿态和真实关节限位
-# 保持独立。地板与逐帧动态高度偏移只读取四个足点，手部接触不会驱动整机 Z；
-# 初始地板由低速稳定足点的最低密集高度簇稳健拟合，不再使用整段 1% 分位。
+# 当前生产配置以 G1 的 30 Hz、低权重 legacy_hold 和停止准则为主干，但针对
+# BUMI3 每臂仅 4 自由度、无法完整复现 SMPL-X 手腕姿态的机构差异，增加手臂上一帧
+# 姿态正则，并在完整 IK 序列后执行联合位置/速度/加速度/jerk 约束 QP。BUMI3
+# 必需的模型、坐标标定、初始姿态和真实关节限位保持独立。地板与逐帧动态高度
+# 偏移只读取四个足点，手部接触不会驱动整机 Z；初始地板由低速稳定足点的最低
+# 密集高度簇稳健拟合，不再使用整段 1% 分位。
 # 用于运动学对照；交付 IsaacLab/控制器前仍需显式重采样到其 50 Hz 更新周期。
 verbose: true
 render_debug: false
@@ -15,12 +17,64 @@ ik_error_metric: legacy_raw
 ik_solver: daqp
 ik_damping: 1.0
 temporal_posture_cost: 0.0
-max_output_joint_velocity_rad_s: 30.0
-max_output_joint_acceleration_rad_s2: 600.0
-max_output_joint_jerk_rad_s3: 40000.0
-# 贴限位占比和不可达位置误差作为诊断 warning；实际越限与轨迹离散速度、
-# 加速度和 jerk 仍由验证器硬验收。30/600/40000 三阶边界只裁剪离群关节帧，
-# 不启用全局高斯平滑，避免为少量坏点牺牲整段舞蹈细节。
+temporal_posture_joint_costs:
+  l_arm_pitch_joint: 5.0
+  l_arm_roll_joint: 5.0
+  l_arm_yaw_joint: 5.0
+  l_elbow_pitch_joint: 5.0
+  r_arm_pitch_joint: 5.0
+  r_arm_roll_joint: 5.0
+  r_arm_yaw_joint: 5.0
+  r_elbow_pitch_joint: 5.0
+# 禁用旧版逐帧因果限幅。旧路径会在限速后再次裁剪关节位置，关节碰到限位时会
+# 突然停止，无法继续保证加速度和 jerk 连续；生产 BUMI3 改由下方整段 QP 负责。
+max_output_joint_velocity_rad_s: 0.0
+max_output_joint_acceleration_rad_s2: 0.0
+max_output_joint_jerk_rad_s3: 0.0
+trajectory_qp:
+  enabled: true
+  solver: osqp
+  position_limit_margin_rad: 0.001
+  track_weight: 1.0
+  velocity_smoothing_weight: 0.1
+  acceleration_smoothing_weight: 1.0
+  jerk_smoothing_weight: 0.1
+  # 速度来自当前 BUMI3 IsaacLab 执行器合同：腰 9 rad/s，其余关节不超过
+  # 12 rad/s。加速度/jerk 尚无厂商额定值，是为离线视觉连续性选取的工程门槛；
+  # 手臂采用更低边界，优先消除 IK 分支跳变，不宣称为实机安全规格。
+  velocity_limit_default_rad_s: 12.0
+  velocity_limit_overrides_rad_s:
+    waist_yaw_joint: 9.0
+  acceleration_limit_default_rad_s2: 80.0
+  acceleration_limit_overrides_rad_s2:
+    waist_yaw_joint: 60.0
+    l_arm_pitch_joint: 60.0
+    l_arm_roll_joint: 60.0
+    l_arm_yaw_joint: 60.0
+    l_elbow_pitch_joint: 60.0
+    r_arm_pitch_joint: 60.0
+    r_arm_roll_joint: 60.0
+    r_arm_yaw_joint: 60.0
+    r_elbow_pitch_joint: 60.0
+  jerk_limit_default_rad_s3: 2400.0
+  jerk_limit_overrides_rad_s3:
+    waist_yaw_joint: 1200.0
+    l_arm_pitch_joint: 1200.0
+    l_arm_roll_joint: 1200.0
+    l_arm_yaw_joint: 1200.0
+    l_elbow_pitch_joint: 1200.0
+    r_arm_pitch_joint: 1200.0
+    r_arm_roll_joint: 1200.0
+    r_arm_yaw_joint: 1200.0
+    r_elbow_pitch_joint: 1200.0
+  eps_abs: 1.0e-7
+  eps_rel: 1.0e-7
+  max_iter: 50000
+  feasibility_tolerance: 1.0e-4
+  constraint_guard_fraction: 0.001
+# 贴限位占比和不可达位置误差作为诊断 warning；实际越限与 QP 的逐关节位置、
+# 速度、加速度和 jerk 合同仍由验证器硬验收。不启用额外高斯平滑，避免 QP 后
+# 再次修改关节并破坏已经联合满足的导数边界。
 joint_limit_occupancy_validation: warning
 task_position_error_validation: warning
 postprocess_joint_gaussian_sigma_frames: 0.0
@@ -256,27 +310,27 @@ ik_match_table:
   left_shoulder:
   - l_arm_pitch_link
   - 30.0
-  - 3.0
+  - 0.5
   left_arm:
   - l_elbow_pitch_link
   - 10.0
-  - 1.0
+  - 0.25
   left_fore_arm:
   - left_hand
   - 10.0
-  - 1.0
+  - 0.0
   right_shoulder:
   - r_arm_pitch_link
   - 30.0
-  - 3.0
+  - 0.5
   right_arm:
   - r_elbow_pitch_link
   - 10.0
-  - 1.0
+  - 0.25
   right_fore_arm:
   - right_hand
   - 10.0
-  - 1.0
+  - 0.0
 key_frame_config:
   hips_mean:
     offset_deg_xyz:

@@ -8,6 +8,7 @@ numpy>=2.0,<3.0
 torch>=2.0
 PyYAML>=6.0
 scipy>=1.13
+osqp>=1.0
 tqdm>=4.66
 glfw>=2.7
 smplx>=0.1.28

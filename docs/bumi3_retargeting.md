@@ -2,9 +2,10 @@
 
 本文说明本仓库 BUMI3 一等支持的资产来源、数据契约、单阶段 IK 方法、运行命令、
 验证边界与排错方式。实现保持仓库原有 SMPL/SMPL-X FK → 按机器人连杆缩放 →
-接触/地面修正 → 单阶段 Mink IK 主干，没有引入 GMR、两阶段 IK、轨迹 QP 或
-学习式后处理。CSV 保持原格式，额外的 JSON 与 Mimic NPZ 用于明确四元数、顺序、
-资产 SHA 和质量统计。
+接触/地面修正 → 单阶段 Mink IK 主干，并针对 BUMI3 四自由度手臂增加上一帧姿态
+正则，最后用全时域稀疏 QP 联合约束标量关节位置、速度、加速度和 jerk。没有引入
+GMR、两阶段 IK 或学习式后处理。CSV 保持原格式，额外的 JSON 与 Mimic NPZ 用于
+明确四元数、顺序、资产 SHA、QP 合同和质量统计。
 
 ## 1. 资产来源与派生边界
 
@@ -122,10 +123,22 @@ heel/toe 锁点突然接管全身 IK 的分支跳变。
 软任务只改善 heel/toe 相对高度，不承诺 `legacy_hold` 的每个支撑帧严格无滑移、无
 局部穿透；这些问题仍需结合红色 heel/toe 点和验证报告检查。
 
-严格基线还把 hips/head/hip/thigh/calf/shoulder/arm/forearm 的位置与旋转 cost 逐项
-设为 G1 配置值，使用 G1 的 `legacy_raw` 停止误差，不启用时间姿态正则、输出关节
-速度/加速度/jerk 修正或高斯平滑。BUMI3 自己的 MJCF、body 名称、连杆尺度、方向标定、
-IK 热启动姿态和真实关节限位必须保留；这些是机构合同，不是可消除的算法变量。
+当前配置继续使用 G1 的 `legacy_raw` 停止误差及非手臂任务权重。BUMI3 每侧只有
+`arm_pitch/roll/yaw + elbow_pitch` 四个自由度，没有 G1 的三自由度手腕，不能同时精确
+满足 SMPL-X 手位置、上下臂方向和完整手腕方向。为避免不可实现的手腕旋转把求解器推到
+另一个 IK 分支，左右 hand/forearm 的位置 cost 保持 `10`，完整手腕方向 cost 取消；
+shoulder/arm 的方向 cost 分别降至 `0.5/0.25`，主要由肩、肘、手三点位置决定上下臂
+方向。八个手臂关节增加 cost `5` 的上一帧姿态目标；该目标在每个输出帧开始时固定为
+上一输出解，在当前帧的多次 Mink 迭代中不变，腰腿和 freejoint 权重严格为零。
+
+逐帧 IK 结束后，`scripts/trajectory_qp.py` 对每个有限位标量关节建立覆盖完整 T 帧的
+稀疏凸 QP。目标函数为原始 IK 位置跟踪加一、二、三阶差分正则；硬约束同时包含收紧后
+关节位置限位（额外保留 `0.001 rad` 裕度）、速度、加速度和 jerk。腰速度上限为
+`9 rad/s`，其余 20 关节均为 `12 rad/s`；默认加速度/jerk 为 `80/2400`，腰和八个
+手臂关节为 `60/1200`。后两组是离线视觉连续性的工程参数，不是厂商实机额定值。
+OSQP 求解边界内部再收紧 `0.1%` 作为长序列三阶差分的数值裕度，但验证仍按上述原始
+边界执行。旧的逐帧限速再裁关节限位路径在 BUMI3 配置中全部置零，QP 之后也不再做
+高斯平滑或关节裁剪；freejoint 根位置/四元数逐帧原样保留。
 
 ## 7. 一键运行
 
@@ -151,6 +164,17 @@ PYTHON_BIN="$CONDA_PREFIX/bin/python" \
 可用变量：`BUMI_SOURCE_DIR`、`SMPL_MOTION_FILE`、`SMPL_MODEL_PATH`、`MODEL_TYPE`、
 `TARGET_FPS`、`KEYPOINTS_NAME`、`OUTPUT_DIR`、`RENDER_DEBUG`、`VISUALIZE`、
 `MAX_FRAMES`、`PYTHON_BIN`。`MAX_FRAMES=0` 表示完整动作。
+
+离屏保存 1280×720、H.264、真实帧率视频：
+
+```bash
+python scripts/render_bumi3_trajectory_video.py \
+  output_data/robot_motion/MOTION_bumi3.csv \
+  --output output_data/videos/MOTION_bumi3.mp4
+```
+
+渲染脚本复用交互播放器的灯光与网格地板，并让相机跟随根平移；已有输出默认拒绝
+覆盖，需要替换时显式加 `--overwrite`。
 
 ## 8. CSV 与 JSON 元数据
 

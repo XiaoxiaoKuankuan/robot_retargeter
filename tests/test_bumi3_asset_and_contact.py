@@ -62,12 +62,44 @@ def test_bumi3_production_config_uses_scoped_dynamic_foot_policy() -> None:
     assert config["ik_error_metric"] == "legacy_raw"
     assert config["initial_settle_passes"] == 5
     assert config["temporal_posture_cost"] == 0.0
-    assert config["max_output_joint_velocity_rad_s"] == pytest.approx(30.0)
-    assert config["max_output_joint_acceleration_rad_s2"] == pytest.approx(600.0)
-    assert config["max_output_joint_jerk_rad_s3"] == pytest.approx(40000.0)
+    arm_joint_names = {
+        f"{side}_{name}_joint"
+        for side in ("l", "r")
+        for name in ("arm_pitch", "arm_roll", "arm_yaw", "elbow_pitch")
+    }
+    assert set(config["temporal_posture_joint_costs"]) == arm_joint_names
+    assert set(config["temporal_posture_joint_costs"].values()) == {5.0}
+    assert config["max_output_joint_velocity_rad_s"] == 0.0
+    assert config["max_output_joint_acceleration_rad_s2"] == 0.0
+    assert config["max_output_joint_jerk_rad_s3"] == 0.0
+    trajectory_qp = config["trajectory_qp"]
+    assert trajectory_qp["enabled"] is True
+    assert trajectory_qp["velocity_limit_default_rad_s"] == pytest.approx(12.0)
+    assert trajectory_qp["velocity_limit_overrides_rad_s"] == {
+        "waist_yaw_joint": 9.0
+    }
+    assert trajectory_qp["acceleration_limit_default_rad_s2"] == pytest.approx(
+        80.0
+    )
+    assert trajectory_qp["jerk_limit_default_rad_s3"] == pytest.approx(2400.0)
     assert config["output"]["target_fps"] == pytest.approx(30.0)
     for name in config["ik_match_table"]:
-        assert config["ik_match_table"][name][1:] == g1_config["ik_match_table"][name][1:]
+        current_position, current_rotation = config["ik_match_table"][name][1:]
+        g1_position, g1_rotation = g1_config["ik_match_table"][name][1:]
+        assert current_position == g1_position
+        if name in {
+            "left_shoulder",
+            "left_arm",
+            "left_fore_arm",
+            "right_shoulder",
+            "right_arm",
+            "right_fore_arm",
+        }:
+            assert current_rotation <= g1_rotation
+        else:
+            assert current_rotation == g1_rotation
+    assert config["ik_match_table"]["left_fore_arm"][2] == 0.0
+    assert config["ik_match_table"]["right_fore_arm"][2] == 0.0
 
 
 def test_bumi3_asset_contract() -> None:

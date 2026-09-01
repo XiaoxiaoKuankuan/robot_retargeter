@@ -37,6 +37,11 @@ from tqdm import tqdm
 from scipy.ndimage import gaussian_filter1d
 from scipy.spatial.transform import Rotation as Rot
 
+from trajectory_qp import (
+    optimize_scalar_joint_trajectory,
+    resolve_posture_cost_vector,
+)
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # Global pause state and keyboard callback
@@ -221,9 +226,11 @@ class RobotRetarget:
         post_ik_ground_mode: str = "lift_only",
         post_ik_foot_floor_barrier: dict | None = None,
         temporal_posture_cost: float = 0.0,
+        temporal_posture_joint_costs: dict[str, float] | None = None,
         max_output_joint_velocity_rad_s: float = 0.0,
         max_output_joint_acceleration_rad_s2: float = 0.0,
         max_output_joint_jerk_rad_s3: float = 0.0,
+        trajectory_qp: dict | None = None,
         postprocess_joint_gaussian_sigma_frames: float = 0.0,
         postprocess_support_projection: bool = False,
         postprocess_min_active_support_height_m: float = -0.009,
@@ -360,6 +367,17 @@ class RobotRetarget:
                 "temporal_posture_cost must be non-negative and finite, got "
                 f"{self.temporal_posture_cost}"
             )
+        self.temporal_posture_joint_costs = dict(
+            temporal_posture_joint_costs or {}
+        )
+        (
+            self.temporal_posture_cost_vector,
+            self.resolved_temporal_posture_joint_costs,
+        ) = resolve_posture_cost_vector(
+            self.model,
+            self.temporal_posture_cost,
+            self.temporal_posture_joint_costs,
+        )
         self.max_output_joint_velocity_rad_s = float(
             max_output_joint_velocity_rad_s
         )
@@ -386,6 +404,10 @@ class RobotRetarget:
                 raise ValueError(f"{name} must be non-negative and finite, got {value}")
         self.output_joint_velocity_state = None
         self.output_joint_acceleration_state = None
+        self.trajectory_qp_config = copy.deepcopy(trajectory_qp or {})
+        self.trajectory_qp_statistics = {
+            "enabled": bool(self.trajectory_qp_config.get("enabled", False))
+        }
         self.postprocess_joint_gaussian_sigma_frames = float(
             postprocess_joint_gaussian_sigma_frames
         )
@@ -629,10 +651,10 @@ class RobotRetarget:
                 self.robot_frame_names.append(robot_frame)
                 self.task_errors[task] = []
         self.base_tasks = list(self.tasks)
-        if self.temporal_posture_cost > 0.0:
+        if np.any(self.temporal_posture_cost_vector > 0.0):
             self.temporal_posture_task = mink.PostureTask(
                 self.model,
-                cost=self.temporal_posture_cost,
+                cost=self.temporal_posture_cost_vector,
                 lm_damping=1.0,
             )
             self.temporal_posture_task.set_target_from_configuration(
@@ -1289,6 +1311,26 @@ class RobotRetarget:
                 else 0.0
             ),
         }
+
+    def _optimize_result_trajectory_qp(self) -> None:
+        """在所有逐帧处理完成后执行全时域关节约束优化。"""
+        if not self.result_pos:
+            self.trajectory_qp_statistics = {
+                "enabled": bool(self.trajectory_qp_config.get("enabled", False)),
+                "applied": False,
+                "reason": "empty_result",
+            }
+            return
+        optimized, diagnostics = optimize_scalar_joint_trajectory(
+            self.model,
+            np.asarray(self.result_pos, dtype=np.float64),
+            self.fps,
+            self.trajectory_qp_config,
+        )
+        diagnostics["applied"] = bool(diagnostics.get("enabled", False))
+        self.trajectory_qp_statistics = diagnostics
+        self.result_pos = [row.copy() for row in optimized]
+        self.configuration.update(optimized[-1])
 
     def setup_contact_targets(self):
         if not self.contact_state_name_to_idx:
@@ -2320,7 +2362,10 @@ class RobotRetarget:
                     time.sleep(max(0, self.time_step - elapsed))
                     # time.sleep(0.02)  # reduce CPU usage
 
+            # 旧后处理可能改变关节值，因此整段 QP 必须放在最后。这样保存边界上的
+            # 位置、速度、加速度和 jerk 均来自同一次联合求解，后面不再做裁剪。
             self._postprocess_result_trajectory()
+            self._optimize_result_trajectory_qp()
         finally:
             if viewer is not None:
                 viewer.close()
@@ -2499,6 +2544,13 @@ class RobotRetarget:
                 self.postprocess_max_stable_support_height_above_clearance_m
             ),
             "temporal_posture_cost": self.temporal_posture_cost,
+            "temporal_posture_joint_costs": (
+                self.temporal_posture_joint_costs
+            ),
+            "resolved_temporal_posture_joint_costs": (
+                self.resolved_temporal_posture_joint_costs
+            ),
+            "trajectory_qp": self.trajectory_qp_statistics,
             "contact_statistics": contact_statistics,
             "ik_statistics": ik_statistics,
         }
@@ -2605,6 +2657,9 @@ if  __name__ == "__main__":
         post_ik_ground_mode=str(config.get("post_ik_ground_mode", "lift_only")),
         post_ik_foot_floor_barrier=config.get("post_ik_foot_floor_barrier"),
         temporal_posture_cost=float(config.get("temporal_posture_cost", 0.0)),
+        temporal_posture_joint_costs=config.get(
+            "temporal_posture_joint_costs", {}
+        ),
         max_output_joint_velocity_rad_s=float(
             config.get("max_output_joint_velocity_rad_s", 0.0)
         ),
@@ -2614,6 +2669,7 @@ if  __name__ == "__main__":
         max_output_joint_jerk_rad_s3=float(
             config.get("max_output_joint_jerk_rad_s3", 0.0)
         ),
+        trajectory_qp=config.get("trajectory_qp"),
         postprocess_joint_gaussian_sigma_frames=float(
             config.get("postprocess_joint_gaussian_sigma_frames", 0.0)
         ),

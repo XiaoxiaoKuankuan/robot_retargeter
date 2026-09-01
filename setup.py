@@ -19,7 +19,8 @@ from setuptools import find_packages, setup
 
 # Core runtime dependencies. Version floors come from the `mjlab` env:
 #   mujoco 3.9.0, mink 1.1.1, numpy 2.4.6, torch 2.11.0, PyYAML 6.0.3,
-#   scipy 1.17.1, tqdm 4.67.3, glfw 2.10.0, smplx 0.1.28, trimesh 4.11.5
+#   scipy 1.17.1, osqp 1.1.3, tqdm 4.67.3, glfw 2.10.0, smplx 0.1.28,
+#   trimesh 4.11.5
 INSTALL_REQUIRES = [
     "mujoco>=3.9.0",
     "mink>=1.1.1",
@@ -27,6 +28,7 @@ INSTALL_REQUIRES = [
     "torch>=2.0",
     "PyYAML>=6.0",
     "scipy>=1.13",
+    "osqp>=1.0",
     "tqdm>=4.66",
     "glfw>=2.7",
     "smplx>=0.1.28",

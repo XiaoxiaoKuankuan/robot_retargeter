@@ -32,6 +32,7 @@ from bumi3_common import (
     sha256_file,
 )
 from export_bumi3_mimic_npz import load_csv_qpos
+from trajectory_qp import resolve_named_limits
 
 
 # 这些门槛用于离线重定向的可视化质量回归，不代表实机速度或力矩安全边界。
@@ -568,6 +569,114 @@ def validate_motion(
     maximum_joint_acceleration = max_abs(joint_acc)
     p99_joint_jerk = p99_abs(joint_jerk)
     maximum_joint_jerk = max_abs(joint_jerk)
+    trajectory_qp_config = dict(config.get("trajectory_qp") or {})
+    trajectory_qp_enabled = bool(trajectory_qp_config.get("enabled", False))
+    trajectory_qp_audit: dict[str, Any] = {
+        "enabled": trajectory_qp_enabled,
+    }
+    if trajectory_qp_enabled:
+        velocity_limits = resolve_named_limits(
+            BUMI3_JOINT_NAMES,
+            trajectory_qp_config.get("velocity_limit_default_rad_s", 12.0),
+            trajectory_qp_config.get("velocity_limit_overrides_rad_s"),
+            "trajectory_qp.velocity_limit",
+        )
+        acceleration_limits = resolve_named_limits(
+            BUMI3_JOINT_NAMES,
+            trajectory_qp_config.get(
+                "acceleration_limit_default_rad_s2", 80.0
+            ),
+            trajectory_qp_config.get("acceleration_limit_overrides_rad_s2"),
+            "trajectory_qp.acceleration_limit",
+        )
+        jerk_limits = resolve_named_limits(
+            BUMI3_JOINT_NAMES,
+            trajectory_qp_config.get("jerk_limit_default_rad_s3", 2400.0),
+            trajectory_qp_config.get("jerk_limit_overrides_rad_s3"),
+            "trajectory_qp.jerk_limit",
+        )
+        position_margin = float(
+            trajectory_qp_config.get("position_limit_margin_rad", 1.0e-3)
+        )
+        feasibility_tolerance = float(
+            trajectory_qp_config.get("feasibility_tolerance", 1.0e-4)
+        )
+        effective_ranges = np.asarray(
+            [
+                effective_joint_range(model, config, name)
+                for name in BUMI3_JOINT_NAMES
+            ],
+            dtype=np.float64,
+        )
+        margins = np.minimum(
+            position_margin,
+            0.05 * (effective_ranges[:, 1] - effective_ranges[:, 0]),
+        )
+        safe_lower = effective_ranges[:, 0] + margins
+        safe_upper = effective_ranges[:, 1] - margins
+        position_violation = max(
+            max_abs(np.minimum(joint_pos - safe_lower, 0.0)),
+            max_abs(np.maximum(joint_pos - safe_upper, 0.0)),
+        )
+        velocity_violation = max_abs(
+            np.maximum(np.abs(joint_vel) - velocity_limits, 0.0)
+        )
+        acceleration_violation = max_abs(
+            np.maximum(np.abs(joint_acc) - acceleration_limits, 0.0)
+        )
+        jerk_violation = max_abs(
+            np.maximum(np.abs(joint_jerk) - jerk_limits, 0.0)
+        )
+        report.require(
+            position_violation <= feasibility_tolerance,
+            "轨迹 QP 位置限位合同失败: "
+            f"violation={position_violation}, tolerance={feasibility_tolerance}",
+        )
+        report.require(
+            velocity_violation <= feasibility_tolerance,
+            "轨迹 QP 逐关节速度合同失败: "
+            f"violation={velocity_violation}, tolerance={feasibility_tolerance}",
+        )
+        report.require(
+            acceleration_violation <= feasibility_tolerance,
+            "轨迹 QP 逐关节加速度合同失败: "
+            f"violation={acceleration_violation}, tolerance={feasibility_tolerance}",
+        )
+        report.require(
+            jerk_violation <= feasibility_tolerance,
+            "轨迹 QP 逐关节 jerk 合同失败: "
+            f"violation={jerk_violation}, tolerance={feasibility_tolerance}",
+        )
+        trajectory_qp_audit.update(
+            {
+                "position_limit_margin_rad": position_margin,
+                "feasibility_tolerance": feasibility_tolerance,
+                "velocity_limits_rad_s": dict(
+                    zip(BUMI3_JOINT_NAMES, velocity_limits.tolist())
+                ),
+                "acceleration_limits_rad_s2": dict(
+                    zip(BUMI3_JOINT_NAMES, acceleration_limits.tolist())
+                ),
+                "jerk_limits_rad_s3": dict(
+                    zip(BUMI3_JOINT_NAMES, jerk_limits.tolist())
+                ),
+                "maximum_constraint_violation": {
+                    "position_rad": position_violation,
+                    "velocity_rad_s": velocity_violation,
+                    "acceleration_rad_s2": acceleration_violation,
+                    "jerk_rad_s3": jerk_violation,
+                },
+                "constraints_passed": bool(
+                    max(
+                        position_violation,
+                        velocity_violation,
+                        acceleration_violation,
+                        jerk_violation,
+                    )
+                    <= feasibility_tolerance
+                ),
+            }
+        )
     joint_limit_occupancy_validation = str(
         config.get("joint_limit_occupancy_validation", "hard")
     )
@@ -983,6 +1092,7 @@ def validate_motion(
             )
 
     ik_statistics = None
+    trajectory_qp_metadata = None
     if metadata_path is not None:
         metadata = json.loads(metadata_path.expanduser().resolve().read_text(encoding="utf-8"))
         report.require(int(metadata.get("num_frames", -1)) == frame_count, "元数据帧数不匹配")
@@ -994,6 +1104,32 @@ def validate_motion(
             f"expected={current_config_sha}, actual={metadata.get('config_sha256')}",
         )
         ik_statistics = metadata.get("ik_statistics")
+        trajectory_qp_metadata = metadata.get("trajectory_qp")
+        report.require(
+            isinstance(trajectory_qp_metadata, dict)
+            and bool(trajectory_qp_metadata.get("enabled", False))
+            == trajectory_qp_enabled,
+            "元数据 trajectory_qp.enabled 与配置不一致",
+        )
+        if trajectory_qp_enabled and isinstance(trajectory_qp_metadata, dict):
+            report.require(
+                bool(trajectory_qp_metadata.get("applied", False)),
+                "元数据表明整段轨迹 QP 未实际执行",
+            )
+            report.require(
+                bool(trajectory_qp_metadata.get("constraints_passed", False)),
+                "元数据表明整段轨迹 QP 约束未通过",
+            )
+            report.require(
+                trajectory_qp_metadata.get("solver")
+                == str(trajectory_qp_config.get("solver", "osqp")).lower(),
+                "元数据轨迹 QP solver 与配置不一致",
+            )
+        report.require(
+            metadata.get("temporal_posture_joint_costs", {})
+            == config.get("temporal_posture_joint_costs", {}),
+            "元数据手臂上一帧姿态权重与配置不一致",
+        )
         report.require(
             float(metadata.get("heel_toe_height_difference_cost", -1.0))
             == float(config.get("heel_toe_height_difference_cost", 0.0)),
@@ -1046,6 +1182,7 @@ def validate_motion(
         "max_abs_joint_acceleration_rad_s2": maximum_joint_acceleration,
         "p99_abs_joint_jerk_rad_s3": p99_joint_jerk,
         "max_abs_joint_jerk_rad_s3": maximum_joint_jerk,
+        "trajectory_qp": trajectory_qp_audit,
         "aggregate_task_position_rms_m": aggregate_position_rms,
         "maximum_task_position_rms_m": maximum_task_position_rms,
         "maximum_calf_task_position_rms_m": maximum_calf_task_position_rms,

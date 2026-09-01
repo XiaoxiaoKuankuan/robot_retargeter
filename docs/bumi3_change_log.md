@@ -1,5 +1,29 @@
 # BUMI3 开发变更日志
 
+## 2026-09-01：手臂分支连续性、逐关节 9/12 rad/s 与全时域约束 QP
+
+### 工作区、问题证据与设计边界
+
+- 本轮位于 `feature/bumi3` 分支，起始 HEAD 为 `7d442f850c9110f482ebf47e256577851025c982`；开始时工作区干净。保留全部既有历史，没有执行 reset、clean、stash、rebase、commit 或 push。用户要求针对 FineDance 080/081 的手臂跳变增加上一帧姿态连续性、按 BUMI3 合同设置腰 `9 rad/s`/其他 `12 rad/s`，降低不可实现的手腕方向目标，并以整段 QP 联合处理关节位置、速度、加速度、jerk 和限位。
+- 修改前两条 CSV 的手臂最大速度都精确达到旧逐帧裁剪值 `30 rad/s`，080/081 分别有 `47/58` 个手臂样本超过 `20 rad/s`；最大加速度分别约 `898.74/865.72 rad/s²`，最大 jerk 约 `42785.98/42827.68 rad/s³`。逐帧 IK 的高迭代帧与手臂尖峰高度重合，而源 SMPL-X 同期没有同量级跳变。BUMI3 每臂仅四自由度、没有 G1 三自由度手腕，沿用 G1 完整手腕方向任务会在不可达目标附近切换 IK 分支。
+- 权威 BUMI3 IsaacLab 配置给腰速度 `9 rad/s`、其余关节 `12 rad/s`。本轮 `60/80 rad/s²` 加速度和 `1200/2400 rad/s³` jerk 是为离线视觉连续性选取的工程参数，不表述为厂商额定值，也没有由此推导实机安全性。
+
+### 代码与配置修改
+
+- 新增 `scripts/trajectory_qp.py`：按 MuJoCo 名称解析有限位 hinge/slide 关节及 qpos 地址，对每个关节建立覆盖整段 T 帧的 OSQP 稀疏凸二次规划。目标联合原始 IK 位置跟踪与一至三阶差分正则；硬约束同时包含关节上下限、速度、加速度和 jerk。根 freejoint 不进入优化。位置限位留 `0.001 rad` 安全裕度，求解边界额外内缩 `0.1%` 吸收长序列三阶差分的数值残差，但输出仍按原始合同和 `1e-4` 容差独立验收；不再在 QP 后裁限位。
+- `scripts/robot_retarget.py` 新增按关节配置的 `temporal_posture_joint_costs`，BUMI3 只给左右八个手臂关节 cost `5`，每帧把上一输出姿态固定为当前帧多次 IK 迭代的弱目标，腰腿与 freejoint 权重为零；新增 `trajectory_qp` 接入、最终序列替换与完整 metadata 诊断。旧标量逐帧速度/加速度/jerk 限幅能力为兼容其他机器人保留，但 BUMI3 三项均设为 0，防止“限速后再裁位置”突然清零真实速度。
+- `config/robot/bumi3.yaml` 保留肩/肘/手位置 cost `30/10/10`，把肩和上臂方向 cost 从 G1 的 `3/1` 降为 `0.5/0.25`，左右完整手腕方向 cost 从 `1` 取消为 0；三点位置继续决定上下臂方向。轨迹 QP 默认速度 `12`、腰覆盖为 `9`；默认加速度/jerk `80/2400`，腰和八个手臂关节覆盖为 `60/1200`。高斯平滑仍为 0，根与地板路径没有改动。
+- `scripts/validate_bumi3_retarget.py` 对最终 CSV 按关节名称独立重算并硬验收 QP 位置安全限位、速度、加速度与 jerk，同时核对 metadata 中 QP 是否实际执行、solver/配置 SHA/手臂正则是否一致。新增 `scripts/render_bumi3_trajectory_video.py`，复用播放器的模型、灯光和网格地板，以根跟随相机流式生成 H.264/yuv420p 视频；默认拒绝覆盖旧文件。`requirements.txt`、`setup.py` 和一键脚本补充 OSQP 运行依赖。
+- `tests/test_trajectory_qp.py` 使用真实 BUMI3 模型构造手臂/腰尖峰，固定根位姿逐元素不变和 21 关节四类硬约束；`tests/test_bumi3_asset_and_contact.py` 固定八关节姿态正则、旧因果限幅关闭、9/12 速度合同及手腕方向降权。
+
+### 全长产物、量化结果与验证边界
+
+- 未覆盖旧产物。新结果分别位于 `output_data/finedance_080_optimized/` 与 `output_data/finedance_081_optimized/`，源仍是 `/home/weili/music_only_4set_v2/motions/finedance/080.npz` 和 `081.npz`，均为真实 30 Hz。080 为 `4858` 帧/`161.933 s`，081 为 `3907` 帧/`130.233 s`；两份联合报告均为 `passed`，配置 SHA 为 `95e0d1e9fa6fcfc143f55abc92afab2b87653f34c47c237a3d983be6c5fa05b1`，MJCF SHA 为 `fe93472dd764704fe8389b0f82052ae84ed8bc90f6d71b1467872f86e08a9ad3`。
+- 080 最终全关节速度/加速度/jerk 峰值为 `11.2334/79.9203/2397.6024`，手臂为 `11.2334/59.9403/1198.8080`；081 对应全关节为 `11.1406/79.9202/2397.6058`，手臂为 `11.1406/59.9402/1198.8095`。两条手臂超过 `20 rad/s` 的样本都从 `47/58` 降为 0。相对逐帧 IK 原始序列，QP 平均绝对改变量仅 `0.00534/0.00565 rad`，最大改变量 `0.5817/0.6470 rad` 集中于原换分支尖峰。
+- 080/081 最终有效任务整体位置 RMS 为 `0.05484/0.05901 m`，最差任务 RMS 为 `0.09549/0.10282 m`，均低于验证器阈值；相较旧产物的整体位置 RMS `0.08285/0.08305 m` 也有下降。QP 最大硬约束残差只有 `1.14e-7/6.96e-8`。两份报告仍如实保留 legacy_hold 的足底 warning：080 最大穿地约 `4.37 cm`、平足等高残差约 `6.36 cm`；081 最大穿地约 `9.22 cm`、平足等高残差约 `6.89 cm`，并有接触水平滑移 warning。本轮没有把这些低权重接触策略不承诺的项伪装成硬通过。
+- 视频为 `output_data/finedance_080_optimized/videos/finedance_080_optimized_bumi3.mp4`（SHA256 `dd7106bcd519b31680044d54e0b888ac47e66cfd668fe6a5b2738ba309fd6a34`）和 `output_data/finedance_081_optimized/videos/finedance_081_optimized_bumi3.mp4`（SHA256 `ac4ad9d2780f3cf368382105c190079ed8febf6af0003661c1f43fe29f2a397a`）。ffprobe 核对为 1280×720、H.264、yuv420p、30 fps、帧数分别精确为 4858/3907；抽检两条 30 秒画面均能看到机器人、网格地板和红色足点，不是黑屏。
+- `/home/weili/miniconda3/envs/robot_retargeter/bin/python -m pytest -q` 最终为 `31 passed`；新增/修改 Python 文件 `py_compile` 通过，`git diff --check` 通过。两条完整 SMPL-X→keypoint→Mink IK→QP→CSV/metadata→Mimic NPZ→联合验证→视频链路已运行。本轮没有逐帧人工观看两段完整视频，没有执行 IsaacLab 动力学 replay、控制器跟踪或实机测试；不能把离线运动学连续性等同于控制安全。
+
 ## 2026-08-31：四足稳定地板、逐帧动态偏移与 heel/toe 等高软约束
 
 ### 工作区与修改目标
